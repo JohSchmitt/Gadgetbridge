@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+/*  Copyright (C) 2017-2020 Andreas Shimokawa, Carsten Pfeiffer, Daniele
     Gobbetti
 
     This file is part of Gadgetbridge.
@@ -26,25 +26,20 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Date;
 import java.util.GregorianCalendar;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.Logging;
 import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
 import nodomain.freeyourgadget.gadgetbridge.database.DBHelper;
+import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiActivitySummaryParser;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.amazfitbip.AmazfitBipService;
 import nodomain.freeyourgadget.gadgetbridge.entities.BaseActivitySummary;
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
 import nodomain.freeyourgadget.gadgetbridge.entities.Device;
 import nodomain.freeyourgadget.gadgetbridge.entities.User;
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind;
-import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.HuamiSupport;
-import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.amazfitbip.BipActivityType;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 /**
@@ -55,7 +50,6 @@ public class FetchSportsSummaryOperation extends AbstractFetchOperation {
     private static final Logger LOG = LoggerFactory.getLogger(FetchSportsSummaryOperation.class);
 
     private ByteArrayOutputStream buffer = new ByteArrayOutputStream(140);
-
     public FetchSportsSummaryOperation(HuamiSupport support) {
         super(support);
         setName("fetching sport summaries");
@@ -84,16 +78,24 @@ public class FetchSportsSummaryOperation extends AbstractFetchOperation {
 
         BaseActivitySummary summary = null;
         if (success) {
-            summary = parseSummary(buffer);
-            try (DBHandler dbHandler = GBApplication.acquireDB()) {
-                DaoSession session = dbHandler.getDaoSession();
-                Device device = DBHelper.getDevice(getDevice(), session);
-                User user = DBHelper.getUser(session);
-                summary.setDevice(device);
-                summary.setUser(user);
-                session.getBaseActivitySummaryDao().insertOrReplace(summary);
-            } catch (Exception ex) {
-                GB.toast(getContext(), "Error saving activity summary", Toast.LENGTH_LONG, GB.ERROR, ex);
+            summary = new BaseActivitySummary();
+            summary.setStartTime(getLastStartTimestamp().getTime()); // due to a bug this has to be set
+            summary.setRawSummaryData(buffer.toByteArray());
+            HuamiActivitySummaryParser parser = new HuamiActivitySummaryParser();
+            summary = parser.parseBinaryData(summary);
+            if (summary != null) {
+                summary.setSummaryData(null); // remove json before saving to database,
+                try (DBHandler dbHandler = GBApplication.acquireDB()) {
+                    DaoSession session = dbHandler.getDaoSession();
+                    Device device = DBHelper.getDevice(getDevice(), session);
+                    User user = DBHelper.getUser(session);
+                    summary.setDevice(device);
+                    summary.setUser(user);
+                    summary.setRawSummaryData(buffer.toByteArray());
+                    session.getBaseActivitySummaryDao().insertOrReplace(summary);
+                } catch (Exception ex) {
+                    GB.toast(getContext(), "Error saving activity summary", Toast.LENGTH_LONG, GB.ERROR, ex);
+                }
             }
         }
 
@@ -107,6 +109,7 @@ public class FetchSportsSummaryOperation extends AbstractFetchOperation {
                 GB.toast(getContext(), "Unable to fetch activity details: " + ex.getMessage(), Toast.LENGTH_LONG, GB.ERROR, ex);
             }
         }
+
     }
 
     @Override
@@ -141,19 +144,19 @@ public class FetchSportsSummaryOperation extends AbstractFetchOperation {
             return;
         }
 
-        if ((byte) (lastPacketCounter + 1) == value[0] ) {
+        if ((byte) (lastPacketCounter + 1) == value[0]) {
             lastPacketCounter++;
             bufferActivityData(value);
         } else {
             GB.toast("Error " + getName() + ", invalid package counter: " + value[0] + ", last was: " + lastPacketCounter, Toast.LENGTH_LONG, GB.ERROR);
             handleActivityFetchFinish(false);
-            return;
         }
     }
 
     /**
      * Buffers the given activity summary data. If the total size is reached,
      * it is converted to an object and saved in the database.
+     *
      * @param value
      */
     @Override
@@ -161,83 +164,6 @@ public class FetchSportsSummaryOperation extends AbstractFetchOperation {
         buffer.write(value, 1, value.length - 1); // skip the counter
     }
 
-    private BaseActivitySummary parseSummary(ByteArrayOutputStream stream) {
-        BaseActivitySummary summary = new BaseActivitySummary();
-        ByteBuffer buffer = ByteBuffer.wrap(stream.toByteArray()).order(ByteOrder.LITTLE_ENDIAN);
-//        summary.setVersion(BLETypeConversions.toUnsigned(buffer.getShort()));
-        short version = buffer.getShort(); // version
-        LOG.debug("Got verison " + version);
-        int activityKind = ActivityKind.TYPE_UNKNOWN;
-        try {
-            int rawKind = BLETypeConversions.toUnsigned(buffer.getShort());
-            BipActivityType activityType = BipActivityType.fromCode(rawKind);
-            activityKind = activityType.toActivityKind();
-        } catch (Exception ex) {
-            LOG.error("Error mapping acivity kind: " + ex.getMessage(), ex);
-        }
-        summary.setActivityKind(activityKind);
-
-        // FIXME: should honor timezone we were in at that time etc
-        long timestamp_start = BLETypeConversions.toUnsigned(buffer.getInt()) * 1000;
-        long timestamp_end = BLETypeConversions.toUnsigned(buffer.getInt()) * 1000;
-
-
-        // FIXME: should be done like this but seems to return crap when in DST
-        //summary.setStartTime(new Date(timestamp_start));
-        //summary.setEndTime(new Date(timestamp_end));
-
-        // FIXME ... so do it like this
-        long duration = timestamp_end - timestamp_start;
-        summary.setStartTime(new Date(getLastStartTimestamp().getTimeInMillis()));
-        summary.setEndTime(new Date(getLastStartTimestamp().getTimeInMillis() + duration));
-
-        int baseLongitude = buffer.getInt();
-        int baseLatitude = buffer.getInt();
-        int baseAltitude = buffer.getInt();
-        summary.setBaseLongitude(baseLongitude);
-        summary.setBaseLatitude(baseLatitude);
-        summary.setBaseAltitude(baseAltitude);
-//        summary.setBaseCoordinate(new GPSCoordinate(baseLatitude, baseLongitude, baseAltitude));
-
-//        summary.setDistanceMeters(Float.intBitsToFloat(buffer.getInt()));
-//        summary.setAscentMeters(Float.intBitsToFloat(buffer.getInt()));
-//        summary.setDescentMeters(Float.intBitsToFloat(buffer.getInt()));
-//
-//        summary.setMinAltitude(Float.intBitsToFloat(buffer.getInt()));
-//        summary.setMaxAltitude(Float.intBitsToFloat(buffer.getInt()));
-//        summary.setMinLatitude(buffer.getInt());
-//        summary.setMaxLatitude(buffer.getInt());
-//        summary.setMinLongitude(buffer.getInt());
-//        summary.setMaxLongitude(buffer.getInt());
-//
-//        summary.setSteps(BLETypeConversions.toUnsigned(buffer.getInt()));
-//        summary.setActiveTimeSeconds(BLETypeConversions.toUnsigned(buffer.getInt()));
-//
-//        summary.setCaloriesBurnt(Float.intBitsToFloat(buffer.get()));
-//        summary.setMaxSpeed(Float.intBitsToFloat(buffer.get()));
-//        summary.setMinPace(Float.intBitsToFloat(buffer.get()));
-//        summary.setMaxPace(Float.intBitsToFloat(buffer.get()));
-//        summary.setTotalStride(Float.intBitsToFloat(buffer.get()));
-
-        buffer.getInt(); //
-        buffer.getInt(); //
-        buffer.getInt(); //
-
-//        summary.setTimeAscent(BLETypeConversions.toUnsigned(buffer.getInt()));
-//        buffer.getInt(); //
-//        summary.setTimeDescent(BLETypeConversions.toUnsigned(buffer.getInt()));
-//        buffer.getInt(); //
-//        summary.setTimeFlat(BLETypeConversions.toUnsigned(buffer.getInt()));
-//
-//        summary.setAverageHR(BLETypeConversions.toUnsigned(buffer.getShort()));
-//
-//        summary.setAveragePace(BLETypeConversions.toUnsigned(buffer.getShort()));
-//        summary.setAverageStride(BLETypeConversions.toUnsigned(buffer.getShort()));
-
-        buffer.getShort(); //
-
-        return summary;
-    }
 
     @Override
     protected String getLastSyncTimeKey() {

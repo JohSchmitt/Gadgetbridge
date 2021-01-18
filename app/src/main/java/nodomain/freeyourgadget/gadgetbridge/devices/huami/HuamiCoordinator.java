@@ -1,5 +1,5 @@
-/*  Copyright (C) 2016-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
-    Gobbetti, José Rebelo
+/*  Copyright (C) 2016-2020 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti, José Rebelo, Nephiel
 
     This file is part of Gadgetbridge.
 
@@ -35,13 +35,13 @@ import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Set;
 
 import de.greenrobot.dao.query.QueryBuilder;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.GBException;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.SettingsActivity;
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.miband.DateTimeDisplay;
@@ -192,9 +192,9 @@ public abstract class HuamiCoordinator extends AbstractDeviceCoordinator {
         return getTimePreference(HuamiConst.PREF_DISCONNECT_NOTIFICATION_END, "00:00", deviceAddress);
     }
 
-    public static Set<String> getDisplayItems(String deviceAddress) {
+    public static boolean getUseCustomFont(String deviceAddress) {
         SharedPreferences prefs = GBApplication.getDeviceSpecificSharedPrefs(deviceAddress);
-        return prefs.getStringSet(HuamiConst.PREF_DISPLAY_ITEMS, null);
+        return prefs.getBoolean(HuamiConst.PREF_USE_CUSTOM_FONT, false);
     }
 
     public static boolean getGoalNotification() {
@@ -249,6 +249,16 @@ public abstract class HuamiCoordinator extends AbstractDeviceCoordinator {
     public static boolean getBandScreenUnlock(String deviceAddress) {
         Prefs prefs = new Prefs(GBApplication.getDeviceSpecificSharedPrefs(deviceAddress));
         return prefs.getBoolean(MiBandConst.PREF_SWIPE_UNLOCK, false);
+    }
+
+    public static boolean getExposeHRThirdParty(String deviceAddress) {
+        Prefs prefs = new Prefs(GBApplication.getDeviceSpecificSharedPrefs(deviceAddress));
+        return prefs.getBoolean(HuamiConst.PREF_EXPOSE_HR_THIRDPARTY, false);
+    }
+
+    public static boolean getBtConnectedAdvertising(String deviceAddress) {
+        Prefs prefs = new Prefs(GBApplication.getDeviceSpecificSharedPrefs(deviceAddress));
+        return prefs.getBoolean(DeviceSettingsPreferenceConst.PREF_BT_CONNECTED_ADVERTISEMENT, false);
     }
 
     protected static Date getTimePreference(String key, String defaultValue, String deviceAddress) {
@@ -311,6 +321,11 @@ public abstract class HuamiCoordinator extends AbstractDeviceCoordinator {
 
     @Override
     public boolean supportsFindDevice() {
+        return true;
+    }
+
+    @Override
+    public boolean supportsAlarmSnoozing() {
         return true;
     }
 }

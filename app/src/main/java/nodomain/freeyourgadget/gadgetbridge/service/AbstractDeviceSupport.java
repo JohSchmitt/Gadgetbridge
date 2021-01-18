@@ -1,5 +1,5 @@
-/*  Copyright (C) 2015-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
-    Gobbetti, José Rebelo, Sebastian Kranz, Taavi Eomäe
+/*  Copyright (C) 2015-2020 Andreas Böhler, Andreas Shimokawa, Carsten
+    Pfeiffer, Daniele Gobbetti, José Rebelo, Sebastian Kranz, Taavi Eomäe
 
     This file is part of Gadgetbridge.
 
@@ -21,12 +21,20 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
+import android.companion.CompanionDeviceManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.telephony.SmsManager;
+
+import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.FileProvider;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,14 +47,10 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Objects;
 
-import androidx.core.app.NotificationCompat;
-import androidx.core.content.FileProvider;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.FindPhoneActivity;
 import nodomain.freeyourgadget.gadgetbridge.activities.appmanager.AbstractAppManagerFragment;
-import nodomain.freeyourgadget.gadgetbridge.activities.charts.ChartsHost;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEvent;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventAppInfo;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventBatteryInfo;
@@ -58,7 +62,6 @@ import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventLEDColor;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventMusicControl;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventNotificationControl;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventScreenshot;
-import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventSleepMonitorResult;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.NotificationListener;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -68,6 +71,7 @@ import nodomain.freeyourgadget.gadgetbridge.service.receivers.GBMusicControlRece
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 
+import static nodomain.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID;
 import static nodomain.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_CHANNEL_ID;
 
 // TODO: support option for a single reminder notification when notifications could not be delivered?
@@ -86,6 +90,8 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
     private BluetoothAdapter btAdapter;
     private Context context;
     private boolean autoReconnect;
+
+
 
     @Override
     public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, Context context) {
@@ -151,8 +157,6 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
             handleGBDeviceEvent((GBDeviceEventVersionInfo) deviceEvent);
         } else if (deviceEvent instanceof GBDeviceEventAppInfo) {
             handleGBDeviceEvent((GBDeviceEventAppInfo) deviceEvent);
-        } else if (deviceEvent instanceof GBDeviceEventSleepMonitorResult) {
-            handleGBDeviceEvent((GBDeviceEventSleepMonitorResult) deviceEvent);
         } else if (deviceEvent instanceof GBDeviceEventScreenshot) {
             handleGBDeviceEvent((GBDeviceEventScreenshot) deviceEvent);
         } else if (deviceEvent instanceof GBDeviceEventNotificationControl) {
@@ -173,9 +177,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
         LOG.info("Got GBDeviceEventFindPhone");
         switch (deviceEvent.event) {
             case START:
-                Intent startIntent = new Intent(getContext(), FindPhoneActivity.class);
-                startIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(startIntent);
+                handleGBDeviceEventFindPhoneStart();
                 break;
             case STOP:
                 Intent intent = new Intent(FindPhoneActivity.ACTION_FOUND);
@@ -185,6 +187,48 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
                 LOG.warn("unknown GBDeviceEventFindPhone");
         }
     }
+
+    private void handleGBDeviceEventFindPhoneStart() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) { // this could be used if app in foreground // TODO: Below Q?
+            Intent startIntent = new Intent(getContext(), FindPhoneActivity.class);
+            startIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(startIntent);
+        } else {
+            handleGBDeviceEventFindPhoneStartNotification();
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private void handleGBDeviceEventFindPhoneStartNotification() {
+        LOG.info("Got handleGBDeviceEventFindPhoneStartNotification");
+        Intent intent = new Intent(context, FindPhoneActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        PendingIntent pi = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+        NotificationCompat.Builder notification = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_HIGH_PRIORITY_ID )
+                .setSmallIcon(R.drawable.ic_notification)
+                .setOngoing(false)
+                .setFullScreenIntent(pi, true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentTitle(  context.getString( R.string.find_my_phone_notification ) );
+
+        notification.setGroup("BackgroundService");
+
+        CompanionDeviceManager manager = (CompanionDeviceManager) context.getSystemService(Context.COMPANION_DEVICE_SERVICE);
+        if (manager.getAssociations().size() > 0) {
+            notificationManager.notify(GB.NOTIFICATION_ID_PHONE_FIND, notification.build());
+            context.startActivity(intent);
+            LOG.debug("CompanionDeviceManager associations were found, starting intent");
+        } else {
+            notificationManager.notify(GB.NOTIFICATION_ID_PHONE_FIND, notification.build());
+            LOG.warn("CompanionDeviceManager associations were not found, can't start intent");
+        }
+    }
+
 
     private void handleGBDeviceEvent(GBDeviceEventMusicControl musicEvent) {
         Context context = getContext();
@@ -200,7 +244,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
         LOG.info("Got event for CALL_CONTROL");
         if(callEvent.event == GBDeviceEventCallControl.Event.IGNORE) {
             LOG.info("Sending intent for mute");
-            Intent broadcastIntent = new Intent("nodomain.freeyourgadget.gadgetbridge.MUTE_CALL");
+            Intent broadcastIntent = new Intent(context.getPackageName() + ".MUTE_CALL");
             broadcastIntent.setPackage(context.getPackageName());
             context.sendBroadcast(broadcastIntent);
             return;
@@ -256,18 +300,6 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
             appInfoIntent.putExtra("app_type" + i, appInfoEvent.apps[i].getType().ordinal());
         }
         LocalBroadcastManager.getInstance(context).sendBroadcast(appInfoIntent);
-    }
-
-    private void handleGBDeviceEvent(GBDeviceEventSleepMonitorResult sleepMonitorResult) {
-        Context context = getContext();
-        LOG.info("Got event for SLEEP_MONIOR_RES");
-        Intent sleepMonitorIntent = new Intent(ChartsHost.REFRESH);
-        sleepMonitorIntent.putExtra("smartalarm_from", sleepMonitorResult.smartalarm_from);
-        sleepMonitorIntent.putExtra("smartalarm_to", sleepMonitorResult.smartalarm_to);
-        sleepMonitorIntent.putExtra("recording_base_timestamp", sleepMonitorResult.recording_base_timestamp);
-        sleepMonitorIntent.putExtra("alarm_gone_off", sleepMonitorResult.alarm_gone_off);
-
-        LocalBroadcastManager.getInstance(context).sendBroadcast(sleepMonitorIntent);
     }
 
     private void handleGBDeviceEvent(GBDeviceEventScreenshot screenshot) {
@@ -347,7 +379,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
             notificationListenerIntent.putExtra("handle", deviceEvent.handle);
             notificationListenerIntent.putExtra("title", deviceEvent.title);
             if (deviceEvent.reply != null) {
-                Prefs prefs = GBApplication.getPrefs();
+                SharedPreferences prefs = GBApplication.getDeviceSpecificSharedPrefs(gbDevice.getAddress());
                 String suffix = prefs.getString("canned_reply_suffix", null);
                 if (suffix != null && !Objects.equals(suffix, "")) {
                     deviceEvent.reply += suffix;
@@ -408,5 +440,9 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
         messageIntent.putExtra(GB.DISPLAY_MESSAGE_SEVERITY, message.severity);
 
         LocalBroadcastManager.getInstance(context).sendBroadcast(messageIntent);
+    }
+
+    public String customStringFilter(String inputString) {
+        return inputString;
     }
 }

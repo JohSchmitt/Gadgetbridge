@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017-2019 Andreas Shimokawa, Daniele Gobbetti
+/*  Copyright (C) 2017-2020 Andreas Shimokawa, Daniele Gobbetti
 
     This file is part of Gadgetbridge.
 
@@ -30,9 +30,6 @@ public class AmazfitCor2FirmwareInfo extends HuamiFirmwareInfo {
     private static final byte[] FW_HEADER = new byte[]{
             0x00, (byte) 0x98, 0x00, 0x20, (byte) 0xA5, 0x04, 0x00, 0x20, (byte) 0xAD, 0x04, 0x00, 0x20, (byte) 0xC5, 0x04, 0x00, 0x20
     };
-
-    private static final int COMPRESSED_RES_HEADER_OFFSET = 0x9;
-    private static final int COMPRESSED_RES_HEADER_OFFSET_NEW = 0xd;
 
     private static Map<Integer, String> crcToVersion = new HashMap<>();
 

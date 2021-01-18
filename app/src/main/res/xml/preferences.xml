@@ -18,6 +18,14 @@
             android:defaultValue="false"
             android:key="general_autocreconnect"
             android:title="@string/pref_title_general_autoreconnect" />
+        <CheckBoxPreference
+            android:layout="@layout/preference_checkbox"
+            android:defaultValue="true"
+            android:key="display_add_device_fab"
+            android:summaryOff="@string/pref_display_add_device_fab_off"
+            android:summaryOn="@string/pref_display_add_device_fab_on"
+            android:title="@string/pref_display_add_device_fab" />
+
         <ListPreference
             android:defaultValue="default"
             android:key="audio_player"
@@ -79,11 +87,16 @@
             </PreferenceScreen>
         </PreferenceScreen>
 
-        <PreferenceScreen android:title="@string/pref_title_weather">
+        <PreferenceScreen
+            android:title="@string/pref_title_weather"
+            android:summary="@string/pref_title_weather_summary">
+
             <EditTextPreference
+                android:inputType="text"
                 android:key="weather_city"
                 android:title="@string/pref_title_weather_location" />
         </PreferenceScreen>
+
         <CheckBoxPreference
             android:layout="@layout/preference_checkbox"
             android:defaultValue="false"
@@ -91,96 +104,16 @@
             android:summaryOff="@string/pref_summary_minimize_priority_off"
             android:summaryOn="@string/pref_summary_minimize_priority_on"
             android:title="@string/pref_title_minimize_priority" />
-
-        <PreferenceScreen
-            android:key="pref_category_activity_personal"
-            android:title="@string/activity_prefs_about_you">
-
-            <EditTextPreference
-                android:inputType="number"
-                android:key="activity_user_year_of_birth"
-                android:maxLength="4"
-                android:title="@string/activity_prefs_year_birth" />
-
-            <ListPreference
-                android:defaultValue="2"
-                android:entries="@array/gender"
-                android:entryValues="@array/gender_values"
-                android:key="activity_user_gender"
-                android:title="@string/activity_prefs_gender"
-                android:summary="%s" />
-
-            <!--TODO: support localized heights and weights -->
-            <EditTextPreference
-                android:inputType="number"
-                android:key="activity_user_height_cm"
-                android:maxLength="3"
-                android:title="@string/activity_prefs_height_cm" />
-
-            <EditTextPreference
-                android:inputType="number"
-                android:key="activity_user_weight_kg"
-                android:maxLength="3"
-                android:title="@string/activity_prefs_weight_kg" />
-
-            <EditTextPreference
-                android:defaultValue="10000"
-                android:inputType="number"
-                android:key="mi_fitness_goal"
-                android:maxLength="5"
-                android:title="@string/miband_prefs_fitness_goal" />
-
-            <EditTextPreference
-                android:inputType="number"
-                android:key="activity_user_sleep_duration"
-                android:maxLength="2"
-                android:title="@string/activity_prefs_sleep_duration" />
-
-            <EditTextPreference
-                android:defaultValue="2000"
-                android:inputType="number"
-                android:key="activity_user_calories_burnt"
-                android:maxLength="4"
-                android:title="@string/activity_prefs_calories_burnt" />
-
-            <EditTextPreference
-                android:defaultValue="5"
-                android:inputType="number"
-                android:key="activity_user_distance_meters"
-                android:maxLength="5"
-                android:title="@string/activity_prefs_distance_meters" />
-
-            <EditTextPreference
-                android:defaultValue="60"
-                android:inputType="number"
-                android:key="activity_user_activetime_minutes"
-                android:maxLength="3"
-                android:title="@string/activity_prefs_activetime_minutes" />
-        </PreferenceScreen>
-        <PreferenceScreen
-            android:key="pref_charts"
-            android:title="@string/activity_prefs_charts">
-
-            <EditTextPreference
-                android:inputType="number"
-                android:key="chart_max_heart_rate"
-                android:maxLength="3"
-                android:defaultValue="250"
-                android:title="@string/activity_prefs_chart_max_heart_rate" />
-
-            <EditTextPreference
-                android:inputType="number"
-                android:key="chart_min_heart_rate"
-                android:maxLength="3"
-                android:defaultValue="10"
-                android:title="@string/activity_prefs_chart_min_heart_rate" />
-        </PreferenceScreen>
-        <CheckBoxPreference
-            android:layout="@layout/preference_checkbox"
-            android:defaultValue="true"
-            android:key="charts_allow_swipe"
-            android:title="@string/pref_title_charts_swipe" />
     </PreferenceCategory>
+
+    <Preference
+        android:key="pref_category_activity_personal"
+        android:title="@string/activity_prefs_about_you" />
+
+    <Preference
+        android:key="pref_charts"
+        android:title="@string/activity_prefs_charts" />
+
     <PreferenceCategory
         android:key="pref_key_datetime"
         android:title="@string/pref_header_datetime">
@@ -267,6 +200,12 @@
 
     <PreferenceCategory
         android:title="@string/preferences_category_device_specific_settings">
+
+        <Preference
+            android:icon="@drawable/ic_device_pebble"
+            android:key="pref_key_qhybrid"
+            android:title="@string/preferences_qhybrid_settings" />
+
         <Preference
             android:icon="@drawable/ic_device_miband"
             android:key="pref_key_miband"
@@ -385,117 +324,6 @@
                     android:title="@string/pref_title_location_keep_uptodate" />
             </PreferenceCategory>
             <PreferenceCategory
-                android:title="@string/pref_header_cannned_messages">
-                <PreferenceScreen android:title="@string/pref_title_canned_replies">
-                    <EditTextPreference
-                        android:defaultValue=" (canned reply)"
-                        android:key="canned_reply_suffix"
-                        android:maxLength="64"
-                        android:title="@string/pref_title_canned_reply_suffix" />
-                    <EditTextPreference
-                        android:key="canned_reply_1"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_2"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_3"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_4"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_5"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_6"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_7"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_8"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_9"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_10"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_11"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_12"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_13"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_14"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_15"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_reply_16"
-                        android:maxLength="64" />
-                </PreferenceScreen>
-                <PreferenceScreen android:title="@string/pref_title_canned_messages_dismisscall">
-                    <Preference
-                        android:key="canned_messages_dismisscall_send"
-                        android:title="@string/pref_title_canned_messages_set" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_1"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_2"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_3"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_4"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_5"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_6"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_7"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_8"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_9"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_10"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_11"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_12"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_13"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_14"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_15"
-                        android:maxLength="64" />
-                    <EditTextPreference
-                        android:key="canned_message_dismisscall_16"
-                        android:maxLength="64" />
-                </PreferenceScreen>
-            </PreferenceCategory>
-            <PreferenceCategory
                 android:title="@string/pref_header_development">
                 <CheckBoxPreference
                     android:defaultValue="false"
@@ -567,22 +395,6 @@
                 android:key="pref_category_hplus_general"
                 android:title="@string/pref_header_general">
 
-                <ListPreference
-                    android:defaultValue="left"
-                    android:entries="@array/wearside"
-                    android:entryValues="@array/wearside_values"
-                    android:key="hplus_wrist"
-                    android:title="@string/miband_prefs_wearside"
-                    android:summary="%s" />
-
-                <ListPreference
-                    android:defaultValue="24h"
-                    android:entries="@array/pref_timeformat_entries"
-                    android:entryValues="@array/pref_timeformat_values"
-                    android:key="hplus_timeformat"
-                    android:title="@string/pref_title_timeformat"
-                    android:summary="%s" />
-
                 <EditTextPreference
                     android:defaultValue="5"
                     android:key="hplus_screentime"
@@ -597,32 +409,7 @@
             </PreferenceCategory>
 
         </PreferenceScreen>
-        <PreferenceScreen
-            android:icon="@drawable/ic_device_h30_h10"
-            android:key="pref_key_id115"
-            android:title="@string/preferences_id115_settings">
-            <PreferenceCategory
-                android:key="pref_category_id115_general"
-                android:title="@string/pref_header_general">
-
-                <ListPreference
-                    android:defaultValue="left"
-                    android:entries="@array/wearside"
-                    android:entryValues="@array/wearside_values"
-                    android:key="id115_wrist"
-                    android:title="@string/miband_prefs_wearside"
-                    android:summary="%s" />
-
-                <ListPreference
-                    android:defaultValue="horizontal"
-                    android:entries="@array/orientation"
-                    android:entryValues="@array/orientation_values"
-                    android:key="id115_screen_orientation"
-                    android:title="@string/prefs_screen_orientation"
-                    android:summary="%s" />
-            </PreferenceCategory>
-        </PreferenceScreen>
-        <Preference
+         <Preference
             android:icon="@drawable/ic_device_zetime"
             android:key="pref_key_zetime"
             android:title="@string/zetime_title_settings"/>
@@ -649,7 +436,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:title="Auto fetch">
+        android:title="@string/pref_header_auto_fetch">
         <CheckBoxPreference
             android:layout="@layout/preference_checkbox"
             android:defaultValue="false"
@@ -673,5 +460,30 @@
             android:defaultValue="false"
             android:key="log_to_file"
             android:title="@string/pref_write_logfiles" />
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="permission_pestering"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_check_permission_status_summary"
+            android:title="@string/pref_check_permission_status" />
+        <CheckBoxPreference
+            android:layout="@layout/preference_checkbox"
+            android:defaultValue="true"
+            android:key="ignore_bonded_devices"
+            android:summary="@string/ignore_bonded_devices_description"
+            android:title="@string/ignore_bonded_devices" />
+        <CheckBoxPreference
+            android:layout="@layout/preference_checkbox"
+            android:defaultValue="false"
+            android:key="disable_new_ble_scanning"
+            android:summary="@string/pref_summary_disable_new_ble_scanning"
+            android:title="@string/pref_disable_new_ble_scanning" />
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="enable_companiondevice_pairing"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/companiondevice_pairing_details"
+            android:title="@string/companiondevice_pairing" />
+
     </PreferenceCategory>
 </PreferenceScreen>

@@ -1,6 +1,314 @@
 <?xml version="1.0" encoding="utf-8"?>
 <changelog>
-
+    <release version="0.51.0" versioncode="185">
+       <change>Amazfit Bip U: Initial support</change>
+       <change>Amazfit Verge Lite: Initial Support</change>
+       <change>Amazfit T-Rex: Add missing menu items, remove non-existent</change>
+       <change>Amazfit Bip S: Fix crash with notifications with only a title (GitNex does this)</change>
+       <change>Casio GBX-100: Add step count data and more device settings</change>
+       <change>Fossil Hybrid Q: Support firmware upgrade</change>
+       <change>Bangle.js: Support for HRM and steps activity recording</change>
+       <change>Huami: Add new option to properly distinguish connected advertising and 3rd party hr exposure</change>
+       <change>Huami: Use blue icon instead of rainbow color icon for Signal (the rainbow icon was blue in early days)</change>
+       <change>Complete overhaul of the daily stats widget</change>
+       <change>Better error message for invalid authentication keys</change>
+    </release>
+    <release version="0.50.0" versioncode="184">
+        <change>Initial support for Casio GBX-100</change>
+        <change>Mi/Amazfit Band 5: Support watchface installation</change>
+        <change>Mi Band 5: Add missing NFC menu item</change>
+        <change>Casio GB-5600B/GB-6900B: Add configurable disconnect notification</change>
+        <change>Casio: Add support for synchronizing profile settings</change>
+        <change>Fossil Hybrid HR: Keep widget values after widget reload</change>
+        <change>Allow sorting and disabling charts/statistics tabs in per-device settings</change>
+        <change>Improve Sports Activities dashboard and Filter</change>
+        <change>Bug fixes for notification removal</change>
+        <change>Allow to clear activity labels</change>
+    </release>
+    <release version="0.49.0" versioncode="183">
+        <change>Initial support for Amazfit Bip S Lite</change>
+        <change>Initial support for Amazfit GTR/GTS 2</change>
+        <change>Huami: allow sorting of shortcuts and menus (all except Mi Band 2)</change>
+        <change>Amazfit Band 5: Allow enabling SpO2 menu</change>
+        <change>Mi/Amazfit Band 5: Support shortcuts (right/left swipe)</change>
+        <change>Amazfit GTS: Fix firmware flashing on Firmware >=0.1.1.16</change>
+        <change>Amazfit GTR: Fix firmware flashing on Firmware >=1.3.7.16 or >=1.7.0.10</change>
+        <change>Amazfit GTR/GTS: Add missing settings menu item in preferences</change>
+        <change>Fossil Hybrid HR: Remove Android notifications when deleting them from the watch</change>
+        <change>Fossil Hybrid HR: Enable rejecting calls on newer firmwares</change>
+        <change>Fossil Hybrid HR: Support hands calibration</change>
+        <change>Fossil Hybrid HR: Support factory reset</change>
+        <change>InfiniTime: Improve notification support for firmware >=0.9</change>
+        <change>Add version to About screen</change>
+        <change>Show GPS track in Sport Activity detail screen</change>
+        <change>Add Activity List Dashboard/Summary view to charts</change>
+        <change>Add heart rate average to Activity and Sleep charts</change>
+        <change>Add intensity to Sleep charts</change>
+        <change>Recognize Wire messenger as a chat application</change>
+        <change>Add confirmation dialog for find device button</change>
+    </release>
+    <release version="0.48.0" versioncode="182">
+        <change>Initial support for Sony SWR12</change>
+        <change>Initial support for Lefun Smart Bands</change>
+        <change>Initial support for Nut devices</change>
+        <change>InfiniTime: Improved music support for latest firmware</change>
+        <change>Fossil Hybrid HR: Fixes and better support for newer firmwares</change>
+        <change>Fossil Hybrid HR: Debug activity for dumping and sending resources to the watch</change>
+        <change>Huami: Improve style of sports activity lists</change>
+        <change>Add sport activity list tab in charts</change>
+        <change>Allow sharing of sports activity summaries as image (full scroll view)</change>
+        <change>Weather: Fix wind speed and direction not being passed properly</change>
+        <change>Fix find your phone feature on Android 10 (need companion device pairing)</change>
+    </release>
+    <release version="0.47.2" versioncode="181">
+        <change>Amazfit Bip S: Send sunrise and sunset on latest firmware if enabled</change>
+        <change>Huami: Support new firmware update protocol (fixes firmware flashing with firmware 2.1.1.50/4.1.5.55 on Amazfit Bip S)</change>
+        <change>Huami: Allow flashing latest GPS firmware</change>
+        <change>InfiniTime: Add support for music control</change>
+        <change>Pebble: Fix steps on home screen widget</change>
+        <change>Bangle.js: Fix issue where call state reporting was corrupted</change>
+        <change>Add charts to sport activity summary view</change>
+        <change>Add missing icons for new sport activity type</change>
+    </release>
+    <release version="0.47.1" versioncode="180">
+        <change>Huami: Add new activity types found in recent Bip S firmware</change>
+        <change>Huami: Many improvements to the activity summary view, including a global view for all devices, filtering per activity type and much more</change>
+        <change>Huami: Prevent generating broken elevation data when they are not sent by the device</change>
+        <change>Amazfit Bip S: Allow flashing more font files and GPS almanac (only cep worked before)</change>
+        <change>Pinetime-JF: Recognize device if it announces itself as InfiniTime</change>
+        <change>ZeTime: Fix weather forecast icons on older firmwares, try to send weather even if no firmware version was detected</change>
+        <change>HPlus: Improve Unicode, notification lenth and  weather support</change>
+        <change>Fix warnings and colors for AboutScreen</change>
+    </release>
+    <release version="0.47.0" versioncode="179">
+        <change>Initial experimental support for Pinetime-JF (not yet usable)</change>
+        <change>HPlus: Recognize Lemfo SG2</change>
+        <change>Huami: Support events forwarding via intents or direct triggering of certain actions (eg. stop music when fall asleep)</change>
+        <change>Huami: Add Sports Activity Detail screen from decoded sports summary values</change>
+        <change>Huami: Recogize and decode lot more activity (workout) types</change>
+        <change>Amazfit Cor/Cor2: Allow workout syncing</change>
+        <change>Add Sports Activity Summary filtering and statistics</change>
+        <change>Many icons have been re-drawn as vectors, also several new device and sports activity icons added</change>
+        <change>Many improvements to the Bluetooth discovery and scanning</change>
+        <change>Fix crash when opening GPX files</change>
+    </release>
+    <release version="0.46.0" versioncode="178">
+        <change>Initial support for Mi Band 5</change>
+        <change>Initial support for TLW64</change>
+        <change>Amazfit GTR/GTS: Fix broken activity data on newer firmwares</change>
+        <change>Big refactoring of the device discovery activity (See PR #1927 description for details)</change>
+        <change>Add about screen</change>
+        <change>New icon for Amazfit Bip</change>
+        <change>Avoid duplicated entries in preferred media player selection</change>
+        <change>Avoid a lot of crashes and improve error handling in various places</change>
+    </release>
+    <release version="0.45.1" versioncode="177">
+        <change>Amazfit GTR/GTS: Fix connection issue with latest firmwares (probably other Huami devices also affected)</change>
+        <change>Add experimental support for TinyWeatherForecastGermany</change>
+    </release>
+    <release version="0.45.0" versioncode="176">
+        <change>Initial support for Amazfit T-Rex</change>
+        <change>Amazfit Bip S: Support installation of latest .res</change>
+        <change>Amazfit Bip S: Support longer notification messages</change>
+        <change>Huami: Limit weather forecast to 7 days to fix problems with weather notificaon 0.3.11</change>
+        <change>Huami: Improve music playback information</change>
+        <change>Huami: Ensure cutting strings on UTF-8 border</change>
+        <change>Stop incoming call notification when VoIP calls are missed</change>
+        <change>Fix a crash when with Farsi translation</change>
+    </release>
+    <release version="0.44.2" versioncode="175">
+        <change>Huami: Support flashing newer GPS firmware and GPS ALM</change>
+        <change>Amazfit Bip S: Support music control</change>
+        <change>Amazfit Bip S: Support flashing firmware, res, gps firmware, watchfaces, fonts and GPS CEP</change>
+        <change>Amazfit Bip S: Allow setting high MTU (much faster firmware installation, default off since it does not work for some)</change>
+        <change>Amazfit Bip S: remove disconnect notification and button action settings (they do not work)</change>
+        <change>Mi Band 4 (possibly others): Fix detected RES version being always 69 for non-whitelisted res files</change>
+        <change>Fossil Hybrid HR: Add last notification widget</change>
+        <change>Try to fix vanishing incoming call information when VoIP call support is enabled</change>
+        <change>Allow setting device aliases (useful if you manage multiple ones of the same type)</change>
+    </release>
+    <release version="0.44.1" versioncode="174">
+        <change>Amazfit Bip S: Support setting shortcuts</change>
+        <change>Amazfit Bip S: Fix setting display items</change>
+        <change>Amazfit Bip S: Fix incoming call notification</change>
+        <change>Huami: Fix menu items vanishing from the device when they were never configured through Gadgetbridge</change>
+        <change>Lenovo Watch9: Fix launch of wrong calibration activity</change>
+        <change>Reduce calls to onSetMusicInfo/onSetMusicState when playing music</change>
+    </release>
+    <release version="0.44.0" versioncode="173">
+        <change>Initial support for WatchX(Plus)</change>
+        <change>Add support for Amazfit GTR Lite (untested and incomplete)</change>
+        <change>Fossil Hybrid HR: Fix some issues with custom widgets</change>
+        <change>Fossil Hybrid HR: Allow setting alarm titles and descriptions</change>
+        <change>Fossil Hybrid HR: Fix step data parsing</change>
+        <change>Amazfit GTS: Fix setting menu items with low MTU</change>
+        <change>Amazfit GTR: Allow setting menu item like GTS</change>
+        <change>ZeTime: Support setting the watch language</change>
+        <change>ZeTime: Support rejecting calls</change>
+        <change>ZeTime: Try to fix weather conditions on newer firmware</change>
+        <change>ZeTime: Fix could not synchronize calendar on connect</change>
+        <change>ZeTime: Fix calendar event time and date</change>
+        <change>ZeTime: Send up to 16 upcoming calendar events on connect if option is enabled</change>
+        <change>Allow set light/dark theme according to system settings (new default)</change>
+    </release>
+    <release version="0.43.3" versioncode="172">
+        <change>Fossil Hybrid HR: Initial support for activity tracking (no sleep yet)</change>
+        <change>Fossil Hybrid HR: Support setting alarms on newer firmware</change>
+        <change>Amazfit GTR/GTS: Fix flashing watchfaces and maybe firmware/res update (still untested)</change>
+        <change>Amazfit GTS: Support enabling/disabling menu items on the watch</change>
+        <change>Implement transliteration for Korean</change>
+    </release>
+    <release version="0.43.2" versioncode="171">
+        <change>Fossil Hybrid HR: Allow choosing and cropping image to be set as watch background</change>
+        <change>Fossil Hybrid HR: Option to draw circles around widgets</change>
+        <change>Fossil Hybrid HR: Experimenal firmware update support</change>
+        <change>Fossil Hybrid HR: Fix vibration strength setting</change>
+        <change>Huami: Do not display firmware information and whitelist information when flashing watchfaces</change>
+        <change>Huami: Disable air quality indicator on Huami devices instead of showing 0</change>
+        <change>Bangle.js: Change encoded char set to match Espruino's 8 bit fonts</change>
+        <change>Steps/Sleep averages: Skip days with zero data</change>
+    </release>
+    <release version="0.43.1" versioncode="170">
+        <change>Initial support for Amazfit Bip S (incomplete, needs the official app once to obtain the pairing key)</change>
+        <change>Amazift Bip Lite: Allow relaxing firmware checks to allow flashing of the regular Bip firmware (for the brave)</change>
+        <change>Fossil Hybrid HR: Fix notification history on newer firmwares</change>
+        <change>Fossil Hybrid HR: Add option to disable widget circle</change>
+        <change>Bangle.js: Don't set time if the option is turned off in settings</change>
+        <change>Bangle.js: DST and time zone fixes</change>
+        <change>Add Arabic-style Eastern Arabic numerals to transliteration</change>
+    </release>
+    <release version="0.43.0" versioncode="169">
+        <change>Initial support for Fossil Hybrid HR (needs complicated key extraction, read wiki)</change>
+        <change>Fossil: Allow switching off the Q Icon and use the default Gadgetbridge icon</change>
+        <change>Fix VoIP call handling during DND</change>
+        <change>Fix find-my-phone for Android 10</change>
+        <change>Huami: Fix crash when calendar event desctription or title was null</change>
+        <change>Huami: Igore all-day events when syncing calendar events</change>
+    </release>
+    <release version="0.42.1" versioncode="168">
+        <change>Fix accepting/rejecting calls on Android 9</change>
+        <change>Mi Band 3/4, Amazfit Bip/Cor/GTS/GTR: Option to sync calender events as reminder</change>
+    </release>
+    <release version="0.42.0" versioncode="167">
+        <change>Initial iTag support</change>
+        <change>Fix indefinitely lasting bluetooth scans when location permission has not been granted</change>
+        <change>Try to stop incoming VoIP call notification when the call is answered</change>
+        <change>Vectorize some icons and add a new Mi Scale 2 icon</change>
+        <change>Mi Band 4: Make high MTU optional, fixes problems on some phones</change>
+        <change>ZeTime: Fix probably broken support (duplicate id used by Fossil)</change>
+    </release>
+    <release version="0.41.1" versioncode="166">
+        <change>Huami: allow to have alarms without snooze feature</change>
+        <change>Mi Band 2: Properly stop a call notification when text notifications are disabled</change>
+        <change>VoIP calls: ignore notifications with only one action, assuming it is an outgoing call</change>
+        <change>Try to fix notifications from Business Calendar</change>
+    </release>
+    <release version="0.41.0" versioncode="165">
+        <change>JYou Y5: Initial support</change>
+        <change>Mi Band 2/Amazfit Bip: Redesign button actions for easy music control setup and support long presses on Bip</change>
+        <change>Amazfit Bip: Remove RES file limit (for BipOS)</change>
+        <change>Huami: Automatically toggle alarm switch when toggling on the Band/Watch while in Alarm settings in Gadetbridge</change>
+        <change>Recogize Pixart-Messenger as Chat App</change>
+    </release>
+    <release version="0.40.1" versioncode="164">
+        <change>Mi Band/Amazfit: Recogize changes when toggling alarm on device (immediately when connected, else when connecting)</change>
+        <change>Mi Band/Amazfit: Fix some bugs with stuck connection when re-connecting</change>
+        <change>Mi Band 4: Support higher MTU for multiple times faster firmware transfer (probably also Amazfit GTR/GTS)</change>
+        <change>Amazfit Cor: Fix setting language to Chinese manually</change>
+    </release>
+    <release version="0.40.0" versioncode="163">
+        <change>Fossil Q Hybrid: Initial support</change>
+        <change>Bangle.js: Initial support</change>
+        <change>Reserve Alarm for Calendar feature restricted to Mi Band 1/2 and moved to per-device settings</change>
+        <change>New icon for App Manager</change>
+    </release>
+    <release version="0.39.1" versioncode="162">
+        <change>Try to actively re-connect when a connection gets interrupted (interval grows up to 64 seconds)</change>
+        <change>Mi Band2/Amazfip Bip: Make button action settings per-device and enable for Amazfit Bip</change>
+    </release>
+    <release version="0.39.0" versioncode="161">
+        <change>Amazfit GTS: Initial and incomplete support, mostly untested</change>
+        <change>Add forward/backward buttons to charts for faster navigation</change>
+        <change>Debug: allow to reset last fetch date for Huami devices</change>
+    </release>
+    <release version="0.38.0" versioncode="160">
+        <change>Amazfit GTR: Initial and incomplete support, mostly untested</change>
+        <change>Amazfit Bip: add Portuguese to the list of selectable languages</change>
+        <change>Mi Band 4: Enable emoji font setting</change>
+        <change>Makibes HR3: Support the english version</change>
+        <change>Makibes HR3: Enable bluetooth pairing for working reconnection</change>
+        <change>Work around crash when trying to display changelog</change>
+        <change>Sleep detection settings: Rolling 24 hours (existing style) or Noon to noon</change>
+        <change>Add alternative color to heartrate in chart settings</change>
+    </release>
+    <release version="0.37.1" versioncode="159">
+        <change>Amazfit Bip Lite: Support flashing firmware and watchfaces</change>
+    </release>
+    <release version="0.37.0" versioncode="158">
+        <change>Initial Makibes HR3 support</change>
+        <change>Amazfit Bip Lite: Initial working support, firmware update is disabled for now (we do not have any firmware for testing)</change>
+        <change>Amazfit Cor 2: Enable Emoji Font setting and 3rd party HR access</change>
+        <change>Find Phone now also vibration in addition to playing the ring tone</change>
+        <change>ID115: All settings are now per-device</change>
+        <change>Time format settings are now per-device for all supported devices</change>
+        <change>Wrist location settings are now per-device for all supported devices</change>
+        <change>Work around broken layout in database management activity</change>
+        <change>Show toast in case no app is installed which can handle GPX files</change>
+        <change>Mi Band 4/Amazfit Bip Lite: Trim white spaces and new lines from auth key</change>
+        <change>Mi Band 4/Amazfit Bip Lite: Display a toast and do not try to pair if there was no auth key supplied</change>
+        <change>Skip service scan if supported device could be recognized without uuids during discovery</change>
+    </release>
+    <release version="0.36.2" versioncode="157">
+        <change>Amazfit Bip: Untested support for Lite variant </change>
+        <change>Force Lineage OS to ask for permission when Trust is used to fix non-working incoming calls</change>
+        <change>Charts: List multiple sleep sessions per day</change>
+    </release>
+    <release version="0.36.1" versioncode="156">
+        <change>Mi Band 2/3/4, Amazfit Bip/Cor: Add setting to expose the HR sensor to 3rd party apps</change>
+        <change>Mi Band 4: Really fix weather location not being updated on the Band</change>
+        <change>Mi Band 4: Fix call notifcation not stopping when call gets answered or rejected on the phone</change>
+        <change>Amazfit Bip/Cor: Support for custom emoji font</change>
+        <change>ZeTime: Enable emoji support</change>
+        <change>ZeTime: Make watch language the same as the phone language by default</change>
+        <change>New status and alarms widget</change>
+        <change>Fix crash when entering notification filter settings</change>
+        <change>Make diagram settings accessible from charts activity</change>
+        <change>Add option to hide the floating plus button in the main activity</change>
+        <change>Fix a potential crash on Android 4.4 KitKat</change>
+    </release>
+    <release version="0.36.0" versioncode="155">
+        <change>Initial Mijia LYWSD02 support (Smart Clock with Humidity and Temperature Sensor), just for setting the time</change>
+        <change>Mi Band 3/4: Allow enabling the NFC menu where supported (useless for now)</change>
+        <change>Mi Band 3/4, Amazfit Cor/Bip: Set language immediately when changing it (not only on connect)</change>
+        <change>Mi Band 3/4, Amazfir Cor/Bip: Add icons for "swimming" and "exercise"</change>
+        <change>Mi Band 4: Support flashing the V2 font</change>
+        <change>Mi Band 4: Fix weather location not being updated on the Band</change>
+        <change>Mi Band 4: remove unsupported DND setting from settings menu</change>
+        <change>Amazfit Bip/Cor: Fix resetting of last fetched date for sports activities</change>
+        <change>Amazfit Bip: Fix sharing GPX files for some Apps</change>
+        <change>Pebble: Use Rebble Store URI</change>
+        <change>Support LineageOS 16.0 weather provider</change>
+        <change>Add Averages to Charts</change>
+        <change>Allow togging between weekly and monthly charts</change>
+    </release>
+    <release version="0.35.2" versioncode="154">
+        <change>Mi Band 1/2: Crash when updating firmware while phone is set to Spanish</change>
+        <change>Mi Band 4: Enable music info support (displays now on the band)</change>
+        <change>Mi Band 4: Support setting date format (for built-in watchfaces)</change>
+        <change>Amazfit Cor 2: Try to fix empty menu on device</change>
+    </release>
+    <release version="0.35.1" versioncode="153">
+        <change>Mi Band 4: Support flashing watchfaces, res and firmware (fonts untested)</change>
+    </release>
+    <release version="0.35.0" versioncode="152">
+        <change>Mi Band 4: Initial support (WARNING: INITIAL SETUP NEEDS MI FIT WITH ACCOUNT AND ROOT, NOT A RECOMMENDED DEVICE FOR GADGETBRIDGE)</change>
+    </release>
+    <release version="0.34.1" versioncode="151">
+        <change>Mi Band 1: Fix crash when entering per-device settings</change>
+        <change>Mi Band 3: Allow setting date format in per-device settings</change>
+        <change>ZeTime: Fix timestmaps</change>
+        <change>Fix a crash when flashing an non-whitelisted firmware while using Gadgetbridge in Spanish</change>
+    </release>
     <release version="0.34.0" versioncode="150">
         <change>Mi Band 1/2/3/Bip/Cor: Migrate many settings to per-device settings (new settings icon in device card in main activity)</change>
         <change>Mi Band 3: Fix setting menu items with 2.4 firmware and add support for the new timer menu</change>

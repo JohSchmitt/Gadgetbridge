@@ -1,4 +1,4 @@
-/*  Copyright (C) 2016-2019 Andreas Shimokawa, Daniele Gobbetti, João
+/*  Copyright (C) 2016-2020 Andreas Shimokawa, Daniele Gobbetti, João
     Paulo Barraca
 
     This file is part of Gadgetbridge.
@@ -30,13 +30,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceCommunicationService;
 import nodomain.freeyourgadget.gadgetbridge.util.DeviceHelper;
 
-/**
- * Created by jpbarraca on 13/04/2017.
- */
-
 public class BluetoothPairingRequestReceiver extends BroadcastReceiver {
-
-
     private static final Logger LOG = LoggerFactory.getLogger(BluetoothConnectReceiver.class);
 
     final DeviceCommunicationService service;
@@ -56,18 +50,18 @@ public class BluetoothPairingRequestReceiver extends BroadcastReceiver {
 
         GBDevice gbDevice = service.getGBDevice();
         BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-        if (gbDevice == null || device == null)
+        if (gbDevice == null || device == null) {
             return;
+        }
 
         DeviceCoordinator coordinator = DeviceHelper.getInstance().getCoordinator(gbDevice);
         try {
-            if (coordinator.getBondingStyle(gbDevice) == DeviceCoordinator.BONDING_STYLE_NONE) {
+            if (coordinator.getBondingStyle() == DeviceCoordinator.BONDING_STYLE_NONE) {
                 LOG.info("Aborting unwanted pairing request");
                 abortBroadcast();
             }
         } catch (Exception e) {
             LOG.warn("Could not abort pairing request process");
-
         }
     }
 }

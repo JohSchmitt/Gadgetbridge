@@ -1,5 +1,5 @@
-/*  Copyright (C) 2015-2019 0nse, Andreas Shimokawa, Carsten Pfeiffer,
-    Daniele Gobbetti, Dikay900, Pavel Elagin, walkjivefly
+/*  Copyright (C) 2015-2020 0nse, Andreas Shimokawa, Carsten Pfeiffer,
+    Daniele Gobbetti, Dikay900, Pavel Elagin, vanous, walkjivefly
 
     This file is part of Gadgetbridge.
 
@@ -26,16 +26,20 @@ import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.View;
 
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.BarLineChartBase;
 import com.github.mikephil.charting.charts.Chart;
-import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.ChartData;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
-import com.github.mikephil.charting.formatter.IAxisValueFormatter;
+import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import org.slf4j.Logger;
@@ -51,10 +55,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentActivity;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.AbstractGBFragment;
@@ -69,6 +69,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample;
 import nodomain.freeyourgadget.gadgetbridge.util.DateTimeUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.DeviceHelper;
+import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 
 /**
  * A base class fragment to be used with ChartsActivity. The fragment can supply
@@ -145,14 +146,19 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
     protected int AK_NOT_WORN_COLOR;
 
     protected String HEARTRATE_LABEL;
+    protected String HEARTRATE_AVERAGE_LABEL;
 
     protected AbstractChartFragment(String... intentFilterActions) {
         mIntentFilterActions = new HashSet<>();
         if (intentFilterActions != null) {
             mIntentFilterActions.addAll(Arrays.asList(intentFilterActions));
         }
-        mIntentFilterActions.add(ChartsHost.DATE_NEXT);
-        mIntentFilterActions.add(ChartsHost.DATE_PREV);
+        mIntentFilterActions.add(ChartsHost.DATE_NEXT_DAY);
+        mIntentFilterActions.add(ChartsHost.DATE_PREV_DAY);
+        mIntentFilterActions.add(ChartsHost.DATE_NEXT_WEEK);
+        mIntentFilterActions.add(ChartsHost.DATE_PREV_WEEK);
+        mIntentFilterActions.add(ChartsHost.DATE_NEXT_MONTH);
+        mIntentFilterActions.add(ChartsHost.DATE_PREV_MONTH);
         mIntentFilterActions.add(ChartsHost.REFRESH);
     }
 
@@ -170,12 +176,18 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
     }
 
     protected void init() {
+        Prefs prefs = GBApplication.getPrefs();
         TypedValue runningColor = new TypedValue();
         BACKGROUND_COLOR = GBApplication.getBackgroundColor(getContext());
         LEGEND_TEXT_COLOR = DESCRIPTION_COLOR = GBApplication.getTextColor(getContext());
         CHART_TEXT_COLOR = ContextCompat.getColor(getContext(), R.color.secondarytext);
-        HEARTRATE_COLOR = ContextCompat.getColor(getContext(), R.color.chart_heartrate);
+        if (prefs.getBoolean("chart_heartrate_color", false)) {
+            HEARTRATE_COLOR = ContextCompat.getColor(getContext(), R.color.chart_heartrate_alternative);
+        }else{
+            HEARTRATE_COLOR = ContextCompat.getColor(getContext(), R.color.chart_heartrate);
+        }
         HEARTRATE_FILL_COLOR = ContextCompat.getColor(getContext(), R.color.chart_heartrate_fill);
+
         getContext().getTheme().resolveAttribute(R.attr.chart_activity, runningColor, true);
         AK_ACTIVITY_COLOR = runningColor.data;
         getContext().getTheme().resolveAttribute(R.attr.chart_deep_sleep, runningColor, true);
@@ -186,6 +198,7 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
         AK_NOT_WORN_COLOR = runningColor.data;
 
         HEARTRATE_LABEL = getContext().getString(R.string.charts_legend_heartrate);
+        HEARTRATE_AVERAGE_LABEL = getContext().getString(R.string.charts_legend_heartrate_average);
 
         akActivity = new ActivityConfig(ActivityKind.TYPE_ACTIVITY, getString(R.string.abstract_chart_fragment_kind_activity), AK_ACTIVITY_COLOR);
         akLightSleep = new ActivityConfig(ActivityKind.TYPE_LIGHT_SLEEP, getString(R.string.abstract_chart_fragment_kind_light_sleep), AK_LIGHT_SLEEP_COLOR);
@@ -243,10 +256,18 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
         String action = intent.getAction();
         if (ChartsHost.REFRESH.equals(action)) {
             refresh();
-        } else if (ChartsHost.DATE_NEXT.equals(action)) {
-            handleDateNext(getStartDate(), getEndDate());
-        } else if (ChartsHost.DATE_PREV.equals(action)) {
-            handleDatePrev(getStartDate(), getEndDate());
+        } else if (ChartsHost.DATE_NEXT_DAY.equals(action)) {
+            handleDate(getStartDate(), getEndDate(),+1);
+        } else if (ChartsHost.DATE_PREV_DAY.equals(action)) {
+            handleDate(getStartDate(), getEndDate(),-1);
+        } else if (ChartsHost.DATE_NEXT_WEEK.equals(action)) {
+            handleDate(getStartDate(), getEndDate(),+7);
+        } else if (ChartsHost.DATE_PREV_WEEK.equals(action)) {
+            handleDate(getStartDate(), getEndDate(),-7);
+        } else if (ChartsHost.DATE_NEXT_MONTH.equals(action)) {
+            handleDate(getStartDate(), getEndDate(),+30);
+        } else if (ChartsHost.DATE_PREV_MONTH.equals(action)) {
+            handleDate(getStartDate(), getEndDate(),-30);
         }
     }
 
@@ -256,31 +277,17 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
      *
      * @param startDate
      * @param endDate
+     * @param Offset
      */
-    protected void handleDatePrev(Date startDate, Date endDate) {
+    protected void handleDate(Date startDate, Date endDate, Integer Offset) {
         if (isVisibleInActivity()) {
-            if (!shiftDates(startDate, endDate, -1)) {
+            if (!shiftDates(startDate, endDate, Offset)) {
                 return;
             }
         }
         refreshIfVisible();
     }
 
-    /**
-     * Default implementation shifts the dates by one day, if visible
-     * and calls #refreshIfVisible().
-     *
-     * @param startDate
-     * @param endDate
-     */
-    protected void handleDateNext(Date startDate, Date endDate) {
-        if (isVisibleInActivity()) {
-            if (!shiftDates(startDate, endDate, +1)) {
-                return;
-            }
-        }
-        refreshIfVisible();
-    }
 
     protected void refreshIfVisible() {
         if (isVisibleInActivity()) {
@@ -359,7 +366,7 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
         // enable touch gestures
         chart.setTouchEnabled(true);
 
-// commented out: this has weird bugs/sideeffects at least on WeekStepsCharts
+// commented out: this has weird bugs/side-effects at least on WeekStepsCharts
 // where only the first Day-label is drawn, because AxisRenderer.computeAxisValues(float,float)
 // appears to have an overflow when calculating 'n' (number of entries)
 //        chart.getXAxis().setGranularity(60*5);
@@ -415,7 +422,7 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
      */
     protected abstract void renderCharts();
 
-    protected DefaultChartsData<LineData> refresh(GBDevice gbDevice, List<? extends ActivitySample> samples) {
+    public DefaultChartsData<LineData> refresh(GBDevice gbDevice, List<? extends ActivitySample> samples) {
 //        Calendar cal = GregorianCalendar.getInstance();
 //        cal.clear();
         TimestampTranslation tsTranslation = new TimestampTranslation();
@@ -572,7 +579,7 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
             lineData = new LineData();
         }
 
-        IAxisValueFormatter xValueFormatter = new SampleXLabelFormatter(tsTranslation);
+        ValueFormatter xValueFormatter = new SampleXLabelFormatter(tsTranslation);
         return new DefaultChartsData(lineData, xValueFormatter);
     }
 
@@ -712,6 +719,29 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
         return samples;
     }
 
+    protected List<? extends ActivitySample> getSamplesofSleep(DBHandler db, GBDevice device) {
+        int SLEEP_HOUR_LIMIT = 12;
+
+        int tsStart = getTSStart();
+        Calendar day = GregorianCalendar.getInstance();
+        day.setTimeInMillis(tsStart * 1000L);
+        day.set(Calendar.HOUR_OF_DAY, SLEEP_HOUR_LIMIT);
+        day.set(Calendar.MINUTE, 0);
+        day.set(Calendar.SECOND, 0);
+        tsStart = toTimestamp(day.getTime());
+
+        int tsEnd = getTSEnd();
+        day.setTimeInMillis(tsEnd* 1000L);
+        day.set(Calendar.HOUR_OF_DAY, SLEEP_HOUR_LIMIT);
+        day.set(Calendar.MINUTE, 0);
+        day.set(Calendar.SECOND, 0);
+        tsEnd = toTimestamp(day.getTime());
+
+        List<ActivitySample> samples = (List<ActivitySample>) getSamples(db, device, tsStart, tsEnd);
+        ensureStartAndEndSamples(samples, tsStart, tsEnd);
+        return samples;
+    }
+
     protected void ensureStartAndEndSamples(List<ActivitySample> samples, int tsStart, int tsEnd) {
         if (samples == null || samples.isEmpty()) {
             return;
@@ -753,14 +783,14 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
 
     public static class DefaultChartsData<T extends ChartData<?>> extends ChartsData {
         private final T data;
-        private IAxisValueFormatter xValueFormatter;
+        private ValueFormatter xValueFormatter;
 
-        public DefaultChartsData(T data, IAxisValueFormatter xValueFormatter) {
+        public DefaultChartsData(T data, ValueFormatter xValueFormatter) {
             this.xValueFormatter = xValueFormatter;
             this.data = data;
         }
 
-        public IAxisValueFormatter getXValueFormatter() {
+        public ValueFormatter getXValueFormatter() {
             return xValueFormatter;
         }
 
@@ -769,7 +799,7 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
         }
     }
 
-    protected static class SampleXLabelFormatter implements IAxisValueFormatter {
+    protected static class SampleXLabelFormatter extends ValueFormatter {
         private final TimestampTranslation tsTranslation;
         SimpleDateFormat annotationDateFormat = new SimpleDateFormat("HH:mm");
 //        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm");
@@ -781,7 +811,7 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
         }
         // TODO: this does not work. Cannot use precomputed labels
         @Override
-        public String getFormattedValue(float value, AxisBase axis) {
+        public String getFormattedValue(float value) {
             cal.clear();
             int ts = (int) value;
             cal.setTimeInMillis(tsTranslation.toOriginalValue(ts) * 1000L);
@@ -791,7 +821,7 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
         }
     }
 
-    protected static class PreformattedXIndexLabelFormatter implements IAxisValueFormatter {
+    protected static class PreformattedXIndexLabelFormatter extends ValueFormatter {
         private ArrayList<String> xLabels;
 
         public PreformattedXIndexLabelFormatter(ArrayList<String> xLabels) {
@@ -799,7 +829,7 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
 
         }
         @Override
-        public String getFormattedValue(float value, AxisBase axis) {
+        public String getFormattedValue(float value) {
             int index = (int) value;
             if (xLabels == null || index >= xLabels.size()) {
                 return String.valueOf(value);
@@ -816,7 +846,7 @@ public abstract class AbstractChartFragment extends AbstractGBFragment {
      * It does this so that the large timestamp values can be used
      * floating point values, where the mantissa is just 24 bits.
      */
-    protected static class TimestampTranslation {
+    public static class TimestampTranslation {
         private int tsOffset = -1;
 
         public int shorten(int timestamp) {

@@ -1,4 +1,4 @@
-/*  Copyright (C) 2016-2019 0nse, Andreas Shimokawa, Carsten Pfeiffer,
+/*  Copyright (C) 2016-2020 0nse, Andreas Shimokawa, Carsten Pfeiffer,
     Daniele Gobbetti, Sebastian Kranz
 
     This file is part of Gadgetbridge.
@@ -44,6 +44,7 @@ public class ActivityUser {
     private int activityUserCaloriesBurnt;
     private int activityUserDistanceMeters;
     private int activityUserActiveTimeMinutes;
+    private int activityUserStepLengthCm;
 
     private static final String defaultUserName = "gadgetbridge-user";
     public static final int defaultUserGender = GENDER_FEMALE;
@@ -56,6 +57,7 @@ public class ActivityUser {
     public static final int defaultUserCaloriesBurnt = 2000;
     public static final int defaultUserDistanceMeters = 5000;
     public static final int defaultUserActiveTimeMinutes = 60;
+    public static final int defaultUserStepLengthCm = 0;
 
     public static final String PREF_USER_NAME = "mi_user_alias";
     public static final String PREF_USER_YEAR_OF_BIRTH = "activity_user_year_of_birth";
@@ -67,6 +69,7 @@ public class ActivityUser {
     public static final String PREF_USER_CALORIES_BURNT = "activity_user_calories_burnt";
     public static final String PREF_USER_DISTANCE_METERS = "activity_user_distance_meters";
     public static final String PREF_USER_ACTIVETIME_MINUTES = "activity_user_activetime_minutes";
+    public static final String PREF_USER_STEP_LENGTH_CM = "activity_user_step_length_cm";
 
     public ActivityUser() {
         fetchPreferences();
@@ -97,6 +100,10 @@ public class ActivityUser {
         return activityUserHeightCm;
     }
 
+    public int getStepLengthCm() {
+        return activityUserStepLengthCm;
+    }
+
     /**
      * @return the user defined sleep duration or the default value when none is set or the stored
      * value is out of any logical bounds.
@@ -109,7 +116,7 @@ public class ActivityUser {
     }
 
     public int getStepsGoal() {
-        if (activityUserStepsGoal < 0) {
+        if (activityUserStepsGoal < 1) {
             activityUserStepsGoal = defaultUserStepsGoal;
         }
         return activityUserStepsGoal;
@@ -139,6 +146,7 @@ public class ActivityUser {
         activityUserCaloriesBurnt = prefs.getInt(PREF_USER_CALORIES_BURNT, defaultUserCaloriesBurnt);
         activityUserDistanceMeters = prefs.getInt(PREF_USER_DISTANCE_METERS, defaultUserDistanceMeters);
         activityUserActiveTimeMinutes = prefs.getInt(PREF_USER_ACTIVETIME_MINUTES, defaultUserActiveTimeMinutes);
+        activityUserStepLengthCm = prefs.getInt(PREF_USER_STEP_LENGTH_CM, defaultUserStepLengthCm);
     }
 
     public Date getUserBirthday() {
@@ -149,7 +157,7 @@ public class ActivityUser {
 
     public int getCaloriesBurnt()
     {
-        if (activityUserCaloriesBurnt < 0) {
+        if (activityUserCaloriesBurnt < 1) {
             activityUserCaloriesBurnt = defaultUserCaloriesBurnt;
         }
         return activityUserCaloriesBurnt;
@@ -157,7 +165,7 @@ public class ActivityUser {
 
     public int getDistanceMeters()
     {
-        if (activityUserDistanceMeters < 0) {
+        if (activityUserDistanceMeters < 1) {
             activityUserDistanceMeters = defaultUserDistanceMeters;
         }
         return activityUserDistanceMeters;
@@ -165,7 +173,7 @@ public class ActivityUser {
 
     public int getActiveTimeMinutes()
     {
-        if (activityUserActiveTimeMinutes < 0) {
+        if (activityUserActiveTimeMinutes < 1) {
             activityUserActiveTimeMinutes = defaultUserActiveTimeMinutes;
         }
         return activityUserActiveTimeMinutes;

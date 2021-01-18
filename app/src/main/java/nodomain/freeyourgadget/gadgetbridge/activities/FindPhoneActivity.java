@@ -1,5 +1,5 @@
-/*  Copyright (C) 2018-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
-    Gobbetti
+/*  Copyright (C) 2018-2020 Andreas Shimokawa, Carsten Pfeiffer, Cre3per,
+    Daniele Gobbetti
 
     This file is part of Gadgetbridge.
 
@@ -17,6 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.activities;
 
+import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -25,7 +26,10 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.view.View;
 import android.widget.Button;
 
@@ -36,6 +40,7 @@ import java.io.IOException;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 
 public class FindPhoneActivity extends AbstractGBActivity {
@@ -58,6 +63,7 @@ public class FindPhoneActivity extends AbstractGBActivity {
         }
     };
 
+    Vibrator mVibrator;
     AudioManager mAudioManager;
     int userVolume;
     MediaPlayer mp;
@@ -79,10 +85,29 @@ public class FindPhoneActivity extends AbstractGBActivity {
                 finish();
             }
         });
+
+        NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.cancel( GB.NOTIFICATION_ID_PHONE_FIND );
+
+        vibrate();
         playRingtone();
     }
 
-    public void playRingtone(){
+    private void vibrate(){
+        mVibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+
+        long[] vibrationPattern = new long[]{ 1000, 1000 };
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            VibrationEffect vibrationEffect = VibrationEffect.createWaveform(vibrationPattern, 0);
+
+            mVibrator.vibrate(vibrationEffect);
+        } else {
+            mVibrator.vibrate(vibrationPattern, 0);
+        }
+    }
+
+    private void playRingtone(){
         mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
         if (mAudioManager != null) {
             userVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_ALARM);
@@ -107,7 +132,11 @@ public class FindPhoneActivity extends AbstractGBActivity {
         }
     }
 
-    public void stopSound() {
+    private void stopVibration() {
+        mVibrator.cancel();
+    }
+
+    private void stopSound() {
         mAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, userVolume, AudioManager.FLAG_PLAY_SOUND);
         mp.stop();
         mp.reset();
@@ -116,7 +145,10 @@ public class FindPhoneActivity extends AbstractGBActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        stopVibration();
         stopSound();
+
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
         unregisterReceiver(mReceiver);
     }

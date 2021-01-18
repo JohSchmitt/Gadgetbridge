@@ -1,4 +1,4 @@
-/*  Copyright (C) 2018-2019 Kranz, Sebastian Kranz
+/*  Copyright (C) 2018-2020 Andreas Shimokawa, Kranz, Sebastian Kranz
 
     This file is part of Gadgetbridge.
 
@@ -80,6 +80,7 @@ public class ZeTimeConstants {
     public static final byte CMD_REMINDERS = (byte) 0x97;
     public static final byte CMD_PUSH_CALENDAR_DAY = (byte) 0x99;
     public static final byte CMD_MUSIC_CONTROL = (byte) 0xD0;
+    public static final byte CMD_CALL_CONTROL = (byte) 0xDC;
     public static final byte CMD_TEST_SIGNALING = (byte) 0xFA;
     // here are the action commands
     public static final byte CMD_REQUEST = (byte) 0x70;
@@ -124,7 +125,6 @@ public class ZeTimeConstants {
     public static final byte INACTIVITY_TYPE = (byte) 0x08;
     public static final byte LOW_POWER_TYPE = (byte) 0x09;
     // watch settings
-    public static final String PREF_WRIST = "zetime_wrist";
     public static final byte WEAR_ON_LEFT_WRIST = (byte) 0x00;
     public static final byte WEAR_ON_RIGHT_WRIST = (byte) 0x01;
 
@@ -160,7 +160,6 @@ public class ZeTimeConstants {
     public static final String PREF_ACTIVITY_TRACKING = "zetime_activity_tracking";
     public static final String PREF_HANDMOVE_DISPLAY = "zetime_handmove_display";
     public static final String PREF_CALORIES_TYPE = "zetime_calories_type";
-    public static final String PREF_TIME_FORMAT = "zetime_time_format";
     public static final String PREF_DATE_FORMAT = "zetime_date_format";
 
     public static final String PREF_ALARM_SIGNALING = "zetime_alarm_signaling";

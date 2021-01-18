@@ -1,4 +1,4 @@
-/*  Copyright (C) 2016-2019 Andreas Shimokawa, Carsten Pfeiffer
+/*  Copyright (C) 2016-2020 Andreas Shimokawa, Carsten Pfeiffer
 
     This file is part of Gadgetbridge.
 
@@ -16,7 +16,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 public class ArrayUtils {
     /**

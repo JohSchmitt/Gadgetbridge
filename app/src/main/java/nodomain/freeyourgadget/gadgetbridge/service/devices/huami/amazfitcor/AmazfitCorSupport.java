@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017-2019 Andreas Shimokawa, Carsten Pfeiffer
+/*  Copyright (C) 2017-2020 Andreas Shimokawa, Carsten Pfeiffer
 
     This file is part of Gadgetbridge.
 
@@ -19,63 +19,42 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.huami.amazfitcor;
 import android.content.Context;
 import android.net.Uri;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
-import java.util.Set;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiFWHelper;
-import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiService;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.amazfitcor.AmazfitCorFWHelper;
-import nodomain.freeyourgadget.gadgetbridge.devices.huami.amazfitcor.AmazfitCorService;
+import nodomain.freeyourgadget.gadgetbridge.model.MusicStateSpec;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.amazfitbip.AmazfitBipSupport;
 
 public class AmazfitCorSupport extends AmazfitBipSupport {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AmazfitCorSupport.class);
-
     @Override
     protected AmazfitCorSupport setDisplayItems(TransactionBuilder builder) {
+        Map<String, Integer> keyPosMap = new LinkedHashMap<>();
+        keyPosMap.put("status", 1);
+        keyPosMap.put("notifications", 2);
+        keyPosMap.put("activity", 3);
+        keyPosMap.put("weather", 4);
+        keyPosMap.put("alarm", 5);
+        keyPosMap.put("timer", 6);
+        keyPosMap.put("settings", 7);
+        keyPosMap.put("alipay", 8);
+        keyPosMap.put("music", 9);
 
-        Set<String> pages = HuamiCoordinator.getDisplayItems(getDevice().getAddress());
-        LOG.info("Setting display items to " + (pages == null ? "none" : pages));
-        byte[] command = AmazfitCorService.COMMAND_CHANGE_SCREENS.clone();
-
-        if (pages != null) {
-            if (pages.contains("status")) {
-                command[1] |= 0x02;
-            }
-            if (pages.contains("notifications")) {
-                command[1] |= 0x04;
-            }
-            if (pages.contains("activity")) {
-                command[1] |= 0x08;
-            }
-            if (pages.contains("weather")) {
-                command[1] |= 0x10;
-            }
-            if (pages.contains("alarm")) {
-                command[1] |= 0x20;
-            }
-            if (pages.contains("timer")) {
-                command[1] |= 0x40;
-            }
-            if (pages.contains("settings")) {
-                command[1] |= 0x80;
-            }
-            if (pages.contains("alipay")) {
-                command[2] |= 0x01;
-            }
-            if (pages.contains("music")) {
-                command[2] |= 0x02;
-            }
-        }
-        builder.write(getCharacteristic(HuamiService.UUID_CHARACTERISTIC_3_CONFIGURATION), command);
-
+        setDisplayItemsOld(builder, false, R.array.pref_cor_display_items_default, keyPosMap);
         return this;
+    }
+
+    @Override
+    public void onSetMusicState(MusicStateSpec stateSpec) {
+        if (stateSpec != null && !stateSpec.equals(bufferMusicStateSpec)) {
+            sendMusicStateToDevice(null, stateSpec);
+            bufferMusicStateSpec = stateSpec;
+        }
     }
 
     @Override

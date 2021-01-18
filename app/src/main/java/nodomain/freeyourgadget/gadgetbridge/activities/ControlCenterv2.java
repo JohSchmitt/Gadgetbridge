@@ -1,5 +1,5 @@
-/*  Copyright (C) 2016-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
-    Gobbetti, Johannes Tysiak, Taavi Eomäe
+/*  Copyright (C) 2016-2020 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti, Johannes Tysiak, Taavi Eomäe, vanous
 
     This file is part of Gadgetbridge.
 
@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.activities;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -27,16 +28,11 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 import android.view.MenuItem;
 import android.view.View;
-
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.navigation.NavigationView;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
@@ -44,12 +40,24 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.navigation.NavigationView;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
+
 import de.cketti.library.changelog.ChangeLog;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -64,18 +72,19 @@ import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 public class ControlCenterv2 extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, GBActivity {
 
+    public static final int MENU_REFRESH_CODE = 1;
+    private static PhoneStateListener fakeStateListener;
+
     //needed for KK compatibility
     static {
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
     }
 
     private DeviceManager deviceManager;
-
     private GBDeviceAdapterv2 mGBDeviceAdapter;
     private RecyclerView deviceListView;
-
+    private FloatingActionButton fab;
     private boolean isLanguageInvalid = false;
-
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -93,6 +102,7 @@ public class ControlCenterv2 extends AppCompatActivity
             }
         }
     };
+    private boolean pesterWithPermissions = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,14 +112,6 @@ public class ControlCenterv2 extends AppCompatActivity
         setContentView(R.layout.activity_controlcenterv2);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                launchDiscoveryActivity();
-            }
-        });
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -131,6 +133,16 @@ public class ControlCenterv2 extends AppCompatActivity
         mGBDeviceAdapter = new GBDeviceAdapterv2(this, deviceList);
 
         deviceListView.setAdapter(this.mGBDeviceAdapter);
+
+        fab = findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                launchDiscoveryActivity();
+            }
+        });
+
+        showFabIfNeccessary();
 
         /* uncomment to enable fixed-swipe to reveal more actions
 
@@ -181,18 +193,28 @@ public class ControlCenterv2 extends AppCompatActivity
          * Ask for permission to intercept notifications on first run.
          */
         Prefs prefs = GBApplication.getPrefs();
-        if (prefs.getBoolean("firstrun", true)) {
-            prefs.getPreferences().edit().putBoolean("firstrun", false).apply();
-            Intent enableIntent = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
-            startActivity(enableIntent);
+        pesterWithPermissions = prefs.getBoolean("permission_pestering", true);
+
+        Set<String> set = NotificationManagerCompat.getEnabledListenerPackages(this);
+        if (pesterWithPermissions) {
+            if (!set.contains(this.getPackageName())) { // If notification listener access hasn't been granted
+                Intent enableIntent = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+                startActivity(enableIntent);
+            }
         }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             checkAndRequestPermissions();
         }
 
         ChangeLog cl = createChangeLog();
         if (cl.isFirstRun()) {
-            cl.getLogDialog().show();
+            try {
+                cl.getLogDialog().show();
+            } catch (Exception ignored) {
+                GB.toast(getBaseContext(), "Error showing Changelog", Toast.LENGTH_LONG, GB.ERROR);
+
+            }
         }
 
         GBApplication.deviceService().start();
@@ -231,6 +253,15 @@ public class ControlCenterv2 extends AppCompatActivity
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == MENU_REFRESH_CODE) {
+            showFabIfNeccessary();
+        }
+    }
+
+
+    @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -239,7 +270,7 @@ public class ControlCenterv2 extends AppCompatActivity
         switch (item.getItemId()) {
             case R.id.action_settings:
                 Intent settingsIntent = new Intent(this, SettingsActivity.class);
-                startActivity(settingsIntent);
+                startActivityForResult(settingsIntent, MENU_REFRESH_CODE);
                 return true;
             case R.id.action_debug:
                 Intent debugIntent = new Intent(this, DebugActivity.class);
@@ -253,6 +284,9 @@ public class ControlCenterv2 extends AppCompatActivity
                 Intent blIntent = new Intent(this, AppBlacklistActivity.class);
                 startActivity(blIntent);
                 return true;
+            case R.id.device_action_discover:
+                launchDiscoveryActivity();
+                return true;
             case R.id.action_quit:
                 GBApplication.quit();
                 return true;
@@ -263,7 +297,15 @@ public class ControlCenterv2 extends AppCompatActivity
                 return true;
             case R.id.external_changelog:
                 ChangeLog cl = createChangeLog();
-                cl.getFullLogDialog().show();
+                try {
+                    cl.getLogDialog().show();
+                } catch (Exception ignored) {
+                    GB.toast(getBaseContext(), "Error showing Changelog", Toast.LENGTH_LONG, GB.ERROR);
+                }
+                return true;
+            case R.id.about:
+                Intent aboutIntent = new Intent(this, AboutActivity.class);
+                startActivity(aboutIntent);
                 return true;
         }
 
@@ -277,13 +319,26 @@ public class ControlCenterv2 extends AppCompatActivity
                 + "background-color: " + AndroidUtils.getBackgroundColorHex(getBaseContext()) + ";" +
                 "}";
         return new ChangeLog(this, css);
-}
+    }
+
     private void launchDiscoveryActivity() {
         startActivity(new Intent(this, DiscoveryActivity.class));
     }
 
     private void refreshPairedDevices() {
         mGBDeviceAdapter.notifyDataSetChanged();
+    }
+
+    private void showFabIfNeccessary() {
+        if (GBApplication.getPrefs().getBoolean("display_add_device_fab", true)) {
+            fab.show();
+        } else {
+            if (deviceManager.getDevices().size() < 1) {
+                fab.show();
+            } else {
+                fab.hide();
+            }
+        }
     }
 
     @TargetApi(Build.VERSION_CODES.M)
@@ -314,14 +369,77 @@ public class ControlCenterv2 extends AppCompatActivity
             wantedPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_DENIED)
             wantedPermissions.add(Manifest.permission.READ_CALENDAR);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_DENIED)
+            wantedPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_DENIED)
+            wantedPermissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+
         try {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.MEDIA_CONTENT_CONTROL) == PackageManager.PERMISSION_DENIED)
                 wantedPermissions.add(Manifest.permission.MEDIA_CONTENT_CONTROL);
-        } catch (Exception ignored){
+        } catch (Exception ignored) {
         }
 
-        if (!wantedPermissions.isEmpty())
-            ActivityCompat.requestPermissions(this, wantedPermissions.toArray(new String[wantedPermissions.size()]), 0);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (pesterWithPermissions) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS) == PackageManager.PERMISSION_DENIED) {
+                    wantedPermissions.add(Manifest.permission.ANSWER_PHONE_CALLS);
+                }
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_DENIED) {
+                wantedPermissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+            }
+        }
+
+        if (!wantedPermissions.isEmpty()) {
+            Prefs prefs = GBApplication.getPrefs();
+            // If this is not the first run, we can rely on
+            // shouldShowRequestPermissionRationale(String permission)
+            // and ignore permissions that shouldn't or can't be requested again
+            if (prefs.getBoolean("permissions_asked", false)) {
+                // Don't request permissions that we shouldn't show a prompt for
+                // e.g. permissions that are "Never" granted by the user or never granted by the system
+                Set<String> shouldNotAsk = new HashSet<>();
+                for (String wantedPermission : wantedPermissions) {
+                    if (!shouldShowRequestPermissionRationale(wantedPermission)) {
+                        shouldNotAsk.add(wantedPermission);
+                    }
+                }
+                wantedPermissions.removeAll(shouldNotAsk);
+            } else {
+                // Permissions have not been asked yet, but now will be
+                prefs.getPreferences().edit().putBoolean("permissions_asked", true).apply();
+            }
+
+            if (!wantedPermissions.isEmpty()) {
+                GB.toast(this, getString(R.string.permission_granting_mandatory), Toast.LENGTH_LONG, GB.ERROR);
+                ActivityCompat.requestPermissions(this, wantedPermissions.toArray(new String[0]), 0);
+                GB.toast(this, getString(R.string.permission_granting_mandatory), Toast.LENGTH_LONG, GB.ERROR);
+            }
+        }
+
+        /* In order to be able to set ringer mode to silent in GB's PhoneCallReceiver
+           the permission to access notifications is needed above Android M
+           ACCESS_NOTIFICATION_POLICY is also needed in the manifest */
+        if (pesterWithPermissions) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (!((NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE)).isNotificationPolicyAccessGranted()) {
+                    GB.toast(this, getString(R.string.permission_granting_mandatory), Toast.LENGTH_LONG, GB.ERROR);
+                    startActivity(new Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS));
+                }
+            }
+        }
+
+        // HACK: On Lineage we have to do this so that the permission dialog pops up
+        if (fakeStateListener == null) {
+            fakeStateListener = new PhoneStateListener();
+            TelephonyManager telephonyManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+            telephonyManager.listen(fakeStateListener, PhoneStateListener.LISTEN_CALL_STATE);
+            telephonyManager.listen(fakeStateListener, PhoneStateListener.LISTEN_NONE);
+        }
     }
 
     public void setLanguage(Locale language, boolean invalidateLanguage) {

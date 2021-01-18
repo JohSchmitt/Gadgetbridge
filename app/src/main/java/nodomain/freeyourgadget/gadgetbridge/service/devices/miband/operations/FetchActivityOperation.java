@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+/*  Copyright (C) 2015-2020 Andreas Shimokawa, Carsten Pfeiffer, Daniele
     Gobbetti
 
     This file is part of Gadgetbridge.
@@ -49,9 +49,6 @@ import nodomain.freeyourgadget.gadgetbridge.util.DateTimeUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 
-//import java.util.concurrent.Executors;
-//import java.util.concurrent.ScheduledExecutorService;
-//import java.util.concurrent.ScheduledFuture;
 
 /**
  * An operation that fetches activity data. For every fetch, a new operation must
@@ -71,7 +68,7 @@ public class FetchActivityOperation extends AbstractMiBand1Operation {
     private final boolean hasPacketCounter;
 
     private class ActivityStruct {
-        private int maxDataPacketLength = 20;
+        private int maxDataPacketLength;
         private int lastNotifiedProgress;
         private final byte[] activityDataHolder;
         private final int activityDataHolderSize;
@@ -154,8 +151,14 @@ public class FetchActivityOperation extends AbstractMiBand1Operation {
 
     private ActivityStruct activityStruct;
 
-    public FetchActivityOperation(MiBandSupport support) {
+    public FetchActivityOperation(MiBandSupport support) throws IOException {
         super(support);
+        if (support == null) {
+            throw new IOException("MiBandSupport was null");
+        }
+        if (support.getDeviceInfo() == null) {
+            throw new IOException("MiBandSupport getDeviceInfo returned null");
+        }
         hasExtendedActivityData = support.getDeviceInfo().supportsHeartrate();
         hasPacketCounter = support.getDeviceInfo().getProfileVersion() >= 0x02000700;
         //temporary buffer, size is a multiple of 60 because we want to store complete minutes (1 minute = 3 or 4 bytes)
@@ -197,6 +200,7 @@ public class FetchActivityOperation extends AbstractMiBand1Operation {
         activityStruct = null;
         operationFinished();
         unsetBusy();
+        GB.signalActivityDataFinish();
     }
 
     /**

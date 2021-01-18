@@ -1,6 +1,6 @@
-/*  Copyright (C) 2015-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+/*  Copyright (C) 2015-2020 Andreas Shimokawa, Carsten Pfeiffer, Daniele
     Gobbetti, Frank Slezak, ivanovlev, Kasha, Lem Dulfo, Pavel Elagin, Steffen
-    Liebergeld
+    Liebergeld, vanous
 
     This file is part of Gadgetbridge.
 
@@ -19,22 +19,33 @@
 package nodomain.freeyourgadget.gadgetbridge.activities;
 
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.appwidget.AppWidgetHost;
+import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
+
+import androidx.core.app.NavUtils;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.RemoteInput;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,14 +53,13 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Objects;
 
-import androidx.core.app.NavUtils;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.RemoteInput;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.Widget;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample;
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceService;
@@ -60,6 +70,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.NotificationType;
 import nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes;
 import nodomain.freeyourgadget.gadgetbridge.service.serial.GBDeviceProtocol;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
+import nodomain.freeyourgadget.gadgetbridge.util.WidgetPreferenceStorage;
 
 import static android.content.Intent.EXTRA_SUBJECT;
 import static nodomain.freeyourgadget.gadgetbridge.util.GB.NOTIFICATION_CHANNEL_ID;
@@ -70,10 +81,6 @@ public class DebugActivity extends AbstractGBActivity {
     private static final String EXTRA_REPLY = "reply";
     private static final String ACTION_REPLY
             = "nodomain.freeyourgadget.gadgetbridge.DebugActivity.action.reply";
-
-    private Spinner sendTypeSpinner;
-
-    private EditText editContent;
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -94,6 +101,8 @@ public class DebugActivity extends AbstractGBActivity {
             }
         }
     };
+    private Spinner sendTypeSpinner;
+    private EditText editContent;
 
     private void handleRealtimeSample(Serializable extra) {
         if (extra instanceof ActivitySample) {
@@ -219,6 +228,43 @@ public class DebugActivity extends AbstractGBActivity {
             }
         });
 
+        Button setFetchTimeButton = findViewById(R.id.SetFetchTimeButton);
+        setFetchTimeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                final Calendar currentDate = Calendar.getInstance();
+                Context context = getApplicationContext();
+
+                if (context instanceof GBApplication) {
+                    GBApplication gbApp = (GBApplication) context;
+                    final GBDevice device = gbApp.getDeviceManager().getSelectedDevice();
+                    if (device != null) {
+                        new DatePickerDialog(DebugActivity.this, new DatePickerDialog.OnDateSetListener() {
+                            @Override
+                            public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
+                                Calendar date = Calendar.getInstance();
+                                date.set(year, monthOfYear, dayOfMonth);
+
+                                long timestamp = date.getTimeInMillis() - 1000;
+                                GB.toast("Setting lastSyncTimeMillis: " + timestamp, Toast.LENGTH_LONG, GB.INFO);
+
+                                SharedPreferences.Editor editor = GBApplication.getDeviceSpecificSharedPrefs(device.getAddress()).edit();
+                                editor.remove("lastSyncTimeMillis"); //FIXME: key reconstruction is BAD
+                                editor.putLong("lastSyncTimeMillis", timestamp);
+                                editor.apply();
+                            }
+                        }, currentDate.get(Calendar.YEAR), currentDate.get(Calendar.MONTH), currentDate.get(Calendar.DATE)).show();
+                    } else {
+                        GB.toast("Device not selected/connected", Toast.LENGTH_LONG, GB.INFO);
+                    }
+                }
+
+
+            }
+        });
+
+
         Button setMusicInfoButton = findViewById(R.id.setMusicInfoButton);
         setMusicInfoButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -292,6 +338,76 @@ public class DebugActivity extends AbstractGBActivity {
                 showWarning();
             }
         });
+
+        Button showWidgetsButton = findViewById(R.id.showWidgetsButton);
+        showWidgetsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAllRegisteredAppWidgets();
+            }
+        });
+
+        Button unregisterWidgetsButton = findViewById(R.id.deleteWidgets);
+        unregisterWidgetsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                unregisterAllRegisteredAppWidgets();
+            }
+        });
+
+        Button showWidgetsPrefsButton = findViewById(R.id.showWidgetsPrefs);
+        showWidgetsPrefsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAppWidgetsPrefs();
+            }
+        });
+
+        Button deleteWidgetsPrefsButton = findViewById(R.id.deleteWidgetsPrefs);
+        deleteWidgetsPrefsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                deleteWidgetsPrefs();
+            }
+        });
+
+    }
+
+    private void deleteWidgetsPrefs() {
+        WidgetPreferenceStorage widgetPreferenceStorage = new WidgetPreferenceStorage();
+        widgetPreferenceStorage.deleteWidgetsPrefs(DebugActivity.this);
+        widgetPreferenceStorage.showAppWidgetsPrefs(DebugActivity.this);
+    }
+
+    private void showAppWidgetsPrefs() {
+        WidgetPreferenceStorage widgetPreferenceStorage = new WidgetPreferenceStorage();
+        widgetPreferenceStorage.showAppWidgetsPrefs(DebugActivity.this);
+
+    }
+
+    private void showAllRegisteredAppWidgets() {
+        //https://stackoverflow.com/questions/17387191/check-if-a-widget-is-exists-on-homescreen-using-appwidgetid
+
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(DebugActivity.this);
+        AppWidgetHost appWidgetHost = new AppWidgetHost(DebugActivity.this, 1); // for removing phantoms
+        int[] appWidgetIDs = appWidgetManager.getAppWidgetIds(new ComponentName(DebugActivity.this, Widget.class));
+        GB.toast("Number of registered app widgets: " + appWidgetIDs.length, Toast.LENGTH_SHORT, GB.INFO);
+        for (int appWidgetID : appWidgetIDs) {
+            GB.toast("Widget: " + appWidgetID, Toast.LENGTH_SHORT, GB.INFO);
+        }
+    }
+
+    private void unregisterAllRegisteredAppWidgets() {
+        //https://stackoverflow.com/questions/17387191/check-if-a-widget-is-exists-on-homescreen-using-appwidgetid
+
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(DebugActivity.this);
+        AppWidgetHost appWidgetHost = new AppWidgetHost(DebugActivity.this, 1); // for removing phantoms
+        int[] appWidgetIDs = appWidgetManager.getAppWidgetIds(new ComponentName(DebugActivity.this, Widget.class));
+        GB.toast("Number of registered app widgets: " + appWidgetIDs.length, Toast.LENGTH_SHORT, GB.INFO);
+        for (int appWidgetID : appWidgetIDs) {
+            appWidgetHost.deleteAppWidgetId(appWidgetID);
+            GB.toast("Removing widget: " + appWidgetID, Toast.LENGTH_SHORT, GB.INFO);
+        }
     }
 
     private void showWarning() {
@@ -320,7 +436,7 @@ public class DebugActivity extends AbstractGBActivity {
 
     private void shareLog() {
         String fileName = GBApplication.getLogPath();
-        if(fileName != null && fileName.length() > 0) {
+        if (fileName != null && fileName.length() > 0) {
             File logFile = new File(fileName);
             if (!logFile.exists()) {
                 GB.toast("File does not exist", Toast.LENGTH_LONG, GB.INFO);

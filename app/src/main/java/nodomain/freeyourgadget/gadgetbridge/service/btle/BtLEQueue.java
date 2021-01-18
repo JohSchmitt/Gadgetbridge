@@ -1,5 +1,6 @@
-/*  Copyright (C) 2015-2019 Andreas Böhler, Andreas Shimokawa, Carsten
-    Pfeiffer, Daniele Gobbetti, Sergey Trofimov, Uwe Hermann
+/*  Copyright (C) 2015-2020 Andreas Böhler, Andreas Shimokawa, Carsten
+    Pfeiffer, Cre3per, Daniel Dakhno, Daniele Gobbetti, Sergey Trofimov,
+    Uwe Hermann
 
     This file is part of Gadgetbridge.
 
@@ -32,6 +33,8 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +46,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import androidx.annotation.Nullable;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.Logging;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -242,6 +244,7 @@ public final class BtLEQueue {
                 mBluetoothGattServer.addService(service);
             }
         }
+
         synchronized (mGattMonitor) {
             // connectGatt with true doesn't really work ;( too often connection problems
             if (GBApplication.isRunningMarshmallowOrLater()) {
@@ -259,11 +262,9 @@ public final class BtLEQueue {
 
     private void setDeviceConnectionState(State newState) {
         LOG.debug("new device connection state: " + newState);
+
         mGbDevice.setState(newState);
         mGbDevice.sendDeviceUpdateIntent(mContext);
-        if (mConnectionLatch != null && newState == State.CONNECTED) {
-            mConnectionLatch.countDown();
-        }
     }
 
     public void disconnect() {
@@ -299,8 +300,6 @@ public final class BtLEQueue {
             mWaitForServerActionResultLatch.countDown();
         }
 
-        boolean wasInitialized = mGbDevice.isInitialized();
-
         setDeviceConnectionState(State.NOT_CONNECTED);
 
         // either we've been disconnected because the device is out of range
@@ -310,7 +309,7 @@ public final class BtLEQueue {
         // reconnecting automatically, so we try to fix this by re-creating mBluetoothGatt.
         // Not sure if this actually works without re-initializing the device...
         if (mBluetoothGatt != null) {
-            if (!wasInitialized || !maybeReconnect()) {
+            if (!maybeReconnect()) {
                 disconnect(); // ensure that we start over cleanly next time
             }
         }
@@ -361,6 +360,16 @@ public final class BtLEQueue {
     }
 
     /**
+     * Aborts the currently running transaction
+     */
+    public void abortCurrentTransaction() {
+        mAbortTransaction = true;
+        if (mWaitForActionResultLatch != null) {
+            mWaitForActionResultLatch.countDown();
+        }
+    }
+
+    /**
      * Adds a serverTransaction to the end of the queue
      *
      * @param transaction
@@ -384,9 +393,7 @@ public final class BtLEQueue {
         if (!transaction.isEmpty()) {
             List<AbstractTransaction> tail = new ArrayList<>(mTransactions.size() + 2);
             //mTransactions.drainTo(tail);
-            for( AbstractTransaction t : mTransactions) {
-                tail.add(t);
-            }
+            tail.addAll(mTransactions);
             mTransactions.clear();
             mTransactions.add(transaction);
             mTransactions.addAll(tail);
@@ -514,6 +521,9 @@ public final class BtLEQueue {
                     // only propagate the successful event
                     getCallbackToUse().onServicesDiscovered(gatt);
                 }
+                if (mConnectionLatch != null) {
+                    mConnectionLatch.countDown();
+                }
             } else {
                 LOG.warn("onServicesDiscovered received: " + status);
             }
@@ -530,6 +540,19 @@ public final class BtLEQueue {
             }
             checkWaitingCharacteristic(characteristic, status);
         }
+
+
+
+        @Override
+        public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+            super.onMtuChanged(gatt, mtu, status);
+
+            if(getCallbackToUse() != null){
+                getCallbackToUse().onMtuChanged(gatt, mtu, status);
+            }
+        }
+
+
 
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt,

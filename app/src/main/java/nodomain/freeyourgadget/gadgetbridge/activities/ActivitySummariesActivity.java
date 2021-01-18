@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+/*  Copyright (C) 2017-2020 Andreas Shimokawa, Carsten Pfeiffer, Daniele
     Gobbetti
 
     This file is part of Gadgetbridge.
@@ -23,9 +23,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.SparseBooleanArray;
+import android.util.TypedValue;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -36,33 +38,51 @@ import android.widget.DatePicker;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Objects;
-
 import androidx.core.content.FileProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Objects;
+
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.adapter.ActivitySummariesAdapter;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHelper;
 import nodomain.freeyourgadget.gadgetbridge.entities.BaseActivitySummary;
+import nodomain.freeyourgadget.gadgetbridge.entities.Device;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummary;
 import nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes;
-import nodomain.freeyourgadget.gadgetbridge.util.AndroidUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
-public class ActivitySummariesActivity extends AbstractListActivity<BaseActivitySummary> {
 
+public class ActivitySummariesActivity extends AbstractListActivity<BaseActivitySummary> {
+    static final int ACTIVITY_FILTER = 1;
+    static final int ACTIVITY_DETAIL = 11;
+    private static final Logger LOG = LoggerFactory.getLogger(ActivitySummariesActivity.class);
+    HashMap<String, Integer> activityKindMap = new HashMap<>(0);
+    int activityFilter = 0;
+    long dateFromFilter = 0;
+    long dateToFilter = 0;
+    long deviceFilter;
+    List<Long> itemsFilter;
+    String nameContainsFilter;
     private GBDevice mGBDevice;
     private SwipeRefreshLayout swipeLayout;
-
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -84,6 +104,14 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
             }
         }
     };
+    private int subtrackDashboard = 0;
+
+    public static int getBackgroundColor(Context context) {
+        TypedValue typedValue = new TypedValue();
+        Resources.Theme theme = context.getTheme();
+        theme.resolveAttribute(R.attr.sports_activity_summary_background, typedValue, true);
+        return typedValue.data;
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -98,12 +126,44 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
     public boolean onOptionsItemSelected(MenuItem item) {
         boolean processed = false;
         switch (item.getItemId()) {
+            case android.R.id.home:
+                // back button, close drawer if open, otherwise exit
+                finish();
+                return true;
             case R.id.activity_action_manage_timestamp:
                 resetFetchTimestampToChosenDate();
                 processed = true;
                 break;
+            case R.id.activity_action_filter:
+                runFilterActivity();
+                return true;
         }
         return processed;
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent resultData) {
+        super.onActivityResult(requestCode, resultCode, resultData);
+        if (requestCode == ACTIVITY_FILTER && resultData != null) {
+            Bundle bundle = resultData.getExtras();
+            activityFilter = bundle.getInt("activityFilter", 0);
+            dateFromFilter = bundle.getLong("dateFromFilter", 0);
+            dateToFilter = bundle.getLong("dateToFilter", 0);
+            deviceFilter = bundle.getLong("deviceFilter", 0);
+            nameContainsFilter = bundle.getString("nameContainsFilter");
+            itemsFilter = (List<Long>) bundle.getSerializable("itemsFilter");
+            setActivityKindFilter(activityFilter);
+            setDateFromFilter(dateFromFilter);
+            setDateToFilter(dateToFilter);
+            setNameContainsFilter(nameContainsFilter);
+            setItemsFilter(itemsFilter);
+            setDeviceFilter(deviceFilter);
+            refresh();
+        }
+        if (requestCode == ACTIVITY_DETAIL) {
+            refresh();
+        }
+
     }
 
     @Override
@@ -114,27 +174,31 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
         } else {
             throw new IllegalArgumentException("Must provide a device when invoking this activity");
         }
-
+        deviceFilter = getDeviceId(mGBDevice);
         IntentFilter filterLocal = new IntentFilter();
         filterLocal.addAction(GBDevice.ACTION_DEVICE_CHANGED);
         LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, filterLocal);
 
         super.onCreate(savedInstanceState);
-        setItemAdapter(new ActivitySummariesAdapter(this, mGBDevice));
+        ActivitySummariesAdapter activitySummariesAdapter = new ActivitySummariesAdapter(this, mGBDevice, activityFilter, dateFromFilter, dateToFilter, nameContainsFilter, deviceFilter, itemsFilter);
+        int backgroundColor = getBackgroundColor(ActivitySummariesActivity.this);
+        activitySummariesAdapter.setBackgroundColor(backgroundColor);
+        activitySummariesAdapter.setShowTime(false);
+        setItemAdapter(activitySummariesAdapter);
 
         getItemListView().setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                if (position == 0) return; // item 0 is empty for dashboard
                 Object item = parent.getItemAtPosition(position);
                 if (item != null) {
                     ActivitySummary summary = (ActivitySummary) item;
-
-                    String gpxTrack = summary.getGpxTrack();
-                    if (gpxTrack != null) {
-                        showTrack(gpxTrack);
-                    } else {
-                        GB.toast("This activity does not contain GPX tracks.", Toast.LENGTH_LONG, GB.INFO);
+                    try {
+                        showActivityDetail(position);
+                    } catch (Exception e) {
+                        GB.toast(getApplicationContext(), "Unable to display Activity Detail, maybe the activity is not available yet: " + e.getMessage(), Toast.LENGTH_LONG, GB.ERROR, e);
                     }
+
                 }
             }
         });
@@ -144,7 +208,9 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
         getItemListView().setMultiChoiceModeListener(new AbsListView.MultiChoiceModeListener() {
             @Override
             public void onItemCheckedStateChanged(ActionMode actionMode, int position, long id, boolean checked) {
-                final int selectedItems = getItemListView().getCheckedItemCount();
+                if (position == 0 && checked) subtrackDashboard = 1;
+                if (position == 0 && !checked) subtrackDashboard = 0;
+                final int selectedItems = getItemListView().getCheckedItemCount() - subtrackDashboard;
                 actionMode.setTitle(selectedItems + " selected");
             }
 
@@ -167,19 +233,18 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
                 switch (menuItem.getItemId()) {
                     case R.id.activity_action_delete:
                         List<BaseActivitySummary> toDelete = new ArrayList<>();
-                        for(int i = 0; i<  checked.size(); i++) {
+                        for (int i = 0; i < checked.size(); i++) {
                             if (checked.valueAt(i)) {
                                 toDelete.add(getItemAdapter().getItem(checked.keyAt(i)));
                             }
                         }
                         deleteItems(toDelete);
-                        processed =  true;
+                        processed = true;
                         break;
                     case R.id.activity_action_export:
                         List<String> paths = new ArrayList<>();
 
-
-                        for(int i = 0; i<  checked.size(); i++) {
+                        for (int i = 0; i < checked.size(); i++) {
                             if (checked.valueAt(i)) {
 
                                 BaseActivitySummary item = getItemAdapter().getItem(checked.keyAt(i));
@@ -197,10 +262,28 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
                         processed = true;
                         break;
                     case R.id.activity_action_select_all:
-                        for ( int i=0; i < getItemListView().getCount(); i++) {
+                        for (int i = 0; i < getItemListView().getCount(); i++) {
                             getItemListView().setItemChecked(i, true);
                         }
                         return true; //don't finish actionmode in this case!
+                    case R.id.activity_action_addto_filter:
+                        List<Long> toFilter = new ArrayList<>();
+                        for (int i = 0; i < checked.size(); i++) {
+                            if (checked.valueAt(i)) {
+                                BaseActivitySummary item = getItemAdapter().getItem(checked.keyAt(i));
+                                if (item != null && item.getId() != null) {
+                                    ActivitySummary summary = item;
+                                    Long id = summary.getId();
+                                    toFilter.add(id);
+                                }
+                            }
+                        }
+                        itemsFilter = toFilter;
+                        setItemsFilter(itemsFilter);
+                        refresh();
+
+                        processed = true;
+                        break;
                     default:
                         break;
                 }
@@ -229,6 +312,24 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
                 fetchTrackData();
             }
         });
+
+        activityKindMap = fillKindMap();
+
+
+    }
+
+    private LinkedHashMap fillKindMap() {
+        LinkedHashMap<String, Integer> newMap = new LinkedHashMap<>(0); //reset
+
+        newMap.put(getString(R.string.activity_summaries_all_activities), 0);
+        for (BaseActivitySummary item : getItemAdapter().getItems()) {
+            String activityName = ActivityKind.asString(item.getActivityKind(), this);
+            if (!newMap.containsKey(activityName) && item.getActivityKind() != 0) {
+                newMap.put(activityName, item.getActivityKind());
+
+            }
+        }
+        return newMap;
     }
 
     public void resetFetchTimestampToChosenDate() {
@@ -240,10 +341,10 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
                 date.set(year, monthOfYear, dayOfMonth);
 
                 long timestamp = date.getTimeInMillis() - 1000;
-                SharedPreferences.Editor editor = GBApplication.getPrefs().getPreferences().edit();
-                editor.remove(mGBDevice.getAddress() + "_" + "lastSportsActivityTimeMillis"); //FIXME: key reconstruction is BAD
-                editor.putLong(mGBDevice.getAddress() + "_" + "lastSportsActivityTimeMillis", timestamp);
-                editor.commit();
+                SharedPreferences.Editor editor = GBApplication.getDeviceSpecificSharedPrefs(mGBDevice.getAddress()).edit();
+                editor.remove("lastSportsActivityTimeMillis"); //FIXME: key reconstruction is BAD
+                editor.putLong("lastSportsActivityTimeMillis", timestamp);
+                editor.apply();
             }
         }, currentDate.get(Calendar.YEAR), currentDate.get(Calendar.MONTH), currentDate.get(Calendar.DATE)).show();
     }
@@ -255,19 +356,15 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
     }
 
     private void deleteItems(List<BaseActivitySummary> items) {
-        for(BaseActivitySummary item : items) {
-            item.delete();
-            getItemAdapter().remove(item);
+        for (BaseActivitySummary item : items) {
+            try {
+                item.delete();
+                getItemAdapter().remove(item);
+            } catch (Exception e) {
+                //pass delete error
+            }
         }
         refresh();
-    }
-
-    private void showTrack(String gpxTrack) {
-        try {
-            AndroidUtils.viewFile(gpxTrack, Intent.ACTION_VIEW, this);
-        } catch (IOException e) {
-            GB.toast(this, "Unable to display GPX track: " + e.getMessage(), Toast.LENGTH_LONG, GB.ERROR, e);
-        }
     }
 
     private void fetchTrackData() {
@@ -281,15 +378,15 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
         }
     }
 
-    private void shareMultiple(List<String> paths){
+    private void shareMultiple(List<String> paths) {
 
         ArrayList<Uri> uris = new ArrayList<>();
-        for(String path: paths){
+        for (String path : paths) {
             File file = new File(path);
             uris.add(FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".screenshot_provider", file));
         }
 
-        if(uris.size() > 0) {
+        if (uris.size() > 0) {
             final Intent intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
             intent.setType("application/gpx+xml");
             intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
@@ -298,5 +395,48 @@ public class ActivitySummariesActivity extends AbstractListActivity<BaseActivity
             GB.toast(this, "No selected activity contains a GPX track to share", Toast.LENGTH_SHORT, GB.ERROR);
         }
 
+    }
+
+    private void showActivityDetail(int position) {
+        Intent ActivitySummaryDetailIntent = new Intent(this, ActivitySummaryDetail.class);
+        Bundle bundle = new Bundle();
+
+        bundle.putInt("position", position);
+        bundle.putSerializable("activityKindMap", activityKindMap);
+        bundle.putSerializable("itemsFilter", (Serializable) itemsFilter);
+        bundle.putInt("activityFilter", activityFilter);
+        bundle.putLong("dateFromFilter", dateFromFilter);
+        bundle.putLong("dateToFilter", dateToFilter);
+        bundle.putLong("deviceFilter", deviceFilter);
+        bundle.putLong("initial_deviceFilter", getDeviceId(mGBDevice));
+        bundle.putString("nameContainsFilter", nameContainsFilter);
+        ActivitySummaryDetailIntent.putExtras(bundle);
+
+        ActivitySummaryDetailIntent.putExtra(GBDevice.EXTRA_DEVICE, mGBDevice);
+        startActivityForResult(ActivitySummaryDetailIntent, ACTIVITY_DETAIL);
+    }
+
+    private void runFilterActivity() {
+        Intent filterIntent = new Intent(this, ActivitySummariesFilter.class);
+        Bundle bundle = new Bundle();
+        bundle.putSerializable("activityKindMap", activityKindMap);
+        bundle.putSerializable("itemsFilter", (Serializable) itemsFilter);
+        bundle.putInt("activityFilter", activityFilter);
+        bundle.putLong("dateFromFilter", dateFromFilter);
+        bundle.putLong("dateToFilter", dateToFilter);
+        bundle.putLong("deviceFilter", deviceFilter);
+        bundle.putLong("initial_deviceFilter", getDeviceId(mGBDevice));
+        bundle.putString("nameContainsFilter", nameContainsFilter);
+        filterIntent.putExtras(bundle);
+        startActivityForResult(filterIntent, ACTIVITY_FILTER);
+    }
+
+    private long getDeviceId(GBDevice device) {
+        try (DBHandler handler = GBApplication.acquireDB()) {
+            Device dbDevice = DBHelper.findDevice(device, handler.getDaoSession());
+            return dbDevice.getId();
+        } catch (Exception e) {
+        }
+        return 0;
     }
 }

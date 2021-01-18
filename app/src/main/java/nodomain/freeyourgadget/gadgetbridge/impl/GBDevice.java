@@ -1,5 +1,5 @@
-/*  Copyright (C) 2015-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
-    Gobbetti, José Rebelo, Taavi Eomäe, Uwe Hermann
+/*  Copyright (C) 2015-2020 Andreas Shimokawa, Carsten Pfeiffer, Daniel
+    Dakhno, Daniele Gobbetti, José Rebelo, Taavi Eomäe, Uwe Hermann
 
     This file is part of Gadgetbridge.
 
@@ -22,6 +22,10 @@ import android.content.Intent;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,9 +34,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
@@ -66,6 +67,7 @@ public class GBDevice implements Parcelable {
     private static final String DEVINFO_ADDR = "ADDR: ";
     private static final String DEVINFO_ADDR2 = "ADDR2: ";
     private String mName;
+    private String mAlias;
     private final String mAddress;
     private String mVolatileAddress;
     private final DeviceType mDeviceType;
@@ -82,20 +84,26 @@ public class GBDevice implements Parcelable {
     private List<ItemWithDetails> mDeviceInfos;
     private HashMap<String, Object> mExtraInfos;
 
-    public GBDevice(String address, String name, DeviceType deviceType) {
-        this(address, null, name, deviceType);
+    private int mNotificationIconConnected = R.drawable.ic_notification;
+    private int mNotificationIconDisconnected = R.drawable.ic_notification_disconnected;
+    private int mNotificationIconLowBattery = R.drawable.ic_notification_low_battery;
+
+    public GBDevice(String address, String name, String alias, DeviceType deviceType) {
+        this(address, null, name, alias, deviceType);
     }
 
-    public GBDevice(String address, String address2, String name, DeviceType deviceType) {
+    public GBDevice(String address, String address2, String name, String alias, DeviceType deviceType) {
         mAddress = address;
         mVolatileAddress = address2;
         mName = (name != null) ? name : mAddress;
+        mAlias = alias;
         mDeviceType = deviceType;
         validate();
     }
 
     private GBDevice(Parcel in) {
         mName = in.readString();
+        mAlias = in.readString();
         mAddress = in.readString();
         mVolatileAddress = in.readString();
         mDeviceType = DeviceType.values()[in.readInt()];
@@ -110,6 +118,9 @@ public class GBDevice implements Parcelable {
         mBusyTask = in.readString();
         mDeviceInfos = in.readArrayList(getClass().getClassLoader());
         mExtraInfos = (HashMap) in.readSerializable();
+        mNotificationIconConnected = in.readInt();
+        mNotificationIconDisconnected = in.readInt();
+        mNotificationIconLowBattery = in.readInt();
 
         validate();
     }
@@ -117,6 +128,7 @@ public class GBDevice implements Parcelable {
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(mName);
+        dest.writeString(mAlias);
         dest.writeString(mAddress);
         dest.writeString(mVolatileAddress);
         dest.writeInt(mDeviceType.ordinal());
@@ -131,6 +143,9 @@ public class GBDevice implements Parcelable {
         dest.writeString(mBusyTask);
         dest.writeList(mDeviceInfos);
         dest.writeSerializable(mExtraInfos);
+        dest.writeInt(mNotificationIconConnected);
+        dest.writeInt(mNotificationIconDisconnected);
+        dest.writeInt(mNotificationIconLowBattery);
     }
 
     private void validate() {
@@ -139,7 +154,19 @@ public class GBDevice implements Parcelable {
         }
     }
 
+
     public String getName() {
+        return mName;
+    }
+
+    public String getAlias() {
+        return mAlias;
+    }
+
+    public String getAliasOrName() {
+        if (mAlias != null && !mAlias.equals("")) {
+            return mAlias;
+        }
         return mName;
     }
 
@@ -149,6 +176,10 @@ public class GBDevice implements Parcelable {
             return;
         }
         mName = name;
+    }
+
+    public void setAlias(String alias) {
+        mAlias = alias;
     }
 
     public String getAddress() {
@@ -219,6 +250,30 @@ public class GBDevice implements Parcelable {
 
     public String getBusyTask() {
         return mBusyTask;
+    }
+
+    public int getNotificationIconConnected() {
+        return mNotificationIconConnected;
+    }
+
+    public void setNotificationIconConnected(int mNotificationIconConnected) {
+        this.mNotificationIconConnected = mNotificationIconConnected;
+    }
+
+    public int getNotificationIconDisconnected() {
+        return mNotificationIconDisconnected;
+    }
+
+    public void setNotificationIconDisconnected(int notificationIconDisconnected) {
+        this.mNotificationIconDisconnected = notificationIconDisconnected;
+    }
+
+    public int getNotificationIconLowBattery() {
+        return mNotificationIconLowBattery;
+    }
+
+    public void setNotificationIconLowBattery(int mNotificationIconLowBattery) {
+        this.mNotificationIconLowBattery = mNotificationIconLowBattery;
     }
 
     /**
